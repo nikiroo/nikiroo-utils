@@ -365,15 +365,15 @@ abstract class ConnectAction {
 	 */
 	private void writeLine(OutputStream out, String line) throws IOException {
 		if (crypt == null) {
-			out.write(line.getBytes());
+			out.write(line.getBytes("UTF-8"));
 			bytesSent += line.length();
 		} else {
 			// TODO: how NOT to create so many big Strings?
 			String b64 = crypt.encrypt64(line, false);
-			out.write(b64.getBytes());
+			out.write(b64.getBytes("UTF-8"));
 			bytesSent += b64.length();
 		}
-		out.write("\n".getBytes());
+		out.write("\n".getBytes("UTF-8"));
 		bytesSent++;
 	}
 }

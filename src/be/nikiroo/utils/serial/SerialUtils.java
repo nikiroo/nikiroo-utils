@@ -1,7 +1,10 @@
 package be.nikiroo.utils.serial;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.NotSerializableException;
+import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -252,14 +255,14 @@ public class SerialUtils {
 	}
 
 	/**
-	 * Serialise the given object into this {@link StringBuilder}.
+	 * Serialise the given object into this {@link OutputStream}.
 	 * <p>
 	 * <b>Important: </b>If the operation fails (with a
 	 * {@link NotSerializableException}), the {@link StringBuilder} will be
 	 * corrupted (will contain bad, most probably not importable data).
 	 * 
-	 * @param builder
-	 *            the output {@link StringBuilder} to serialise to
+	 * @param out
+	 *            the output {@link OutputStream} to serialise to
 	 * @param o
 	 *            the object to serialise
 	 * @param map
@@ -271,9 +274,11 @@ public class SerialUtils {
 	 *             if the object cannot be serialised (in this case, the
 	 *             {@link StringBuilder} can contain bad, most probably not
 	 *             importable data)
+	 * @throws IOException
+	 *             in case of I/O errors
 	 */
-	static void append(StringBuilder builder, Object o, Map<Integer, Object> map)
-			throws NotSerializableException {
+	static void append(OutputStream out, Object o, Map<Integer, Object> map)
+			throws NotSerializableException, IOException {
 
 		Field[] fields = new Field[] {};
 		String type = "";
@@ -295,9 +300,13 @@ public class SerialUtils {
 			}
 		}
 
-		builder.append("{\nREF ").append(type).append("@").append(id)
-				.append(":");
-		if (!encode(builder, o)) { // check if direct value
+		write(out, "{\nREF ");
+		write(out, type);
+		write(out, "@");
+		write(out, id);
+		write(out, ":");
+
+		if (!encode(out, o)) { // check if direct value
 			try {
 				for (Field field : fields) {
 					field.setAccessible(true);
@@ -311,16 +320,15 @@ public class SerialUtils {
 						continue;
 					}
 
-					builder.append("\n");
-					builder.append(field.getName());
-					builder.append(":");
-					Object value;
+					write(out, "\n");
+					write(out, field.getName());
+					write(out, ":");
 
-					value = field.get(o);
+					Object value = field.get(o);
 
-					if (!encode(builder, value)) {
-						builder.append("\n");
-						append(builder, value, map);
+					if (!encode(out, value)) {
+						write(out, "\n");
+						append(out, value, map);
 					}
 				}
 			} catch (IllegalArgumentException e) {
@@ -331,11 +339,12 @@ public class SerialUtils {
 										// setAccessible)
 			}
 		}
-		builder.append("\n}");
+		write(out, "\n}");
 	}
 
 	/**
-	 * Encode the object into the given builder if possible and if supported.
+	 * Encode the object into the given {@link OutputStream} if possible and if
+	 * supported.
 	 * <p>
 	 * A supported object in this context means an object we can directly
 	 * encode, like an Integer or a String. Custom objects and arrays are also
@@ -343,47 +352,57 @@ public class SerialUtils {
 	 * <p>
 	 * For compound objects, you should use {@link Exporter}.
 	 * 
-	 * @param builder
-	 *            the builder to append to
+	 * @param out
+	 *            the {@link OutputStream} to append to
 	 * @param value
 	 *            the object to encode (can be NULL, which will be encoded)
 	 * 
-	 * @return TRUE if success, FALSE if not (the content of the builder won't
-	 *         be changed in case of failure)
+	 * @return TRUE if success, FALSE if not (the content of the
+	 *         {@link OutputStream} won't be changed in case of failure)
+	 * 
+	 * @throws IOException
+	 *             in case of I/O error
 	 */
-	static boolean encode(StringBuilder builder, Object value) {
+	static boolean encode(OutputStream out, Object value) throws IOException {
 		if (value == null) {
-			builder.append("NULL");
+			write(out, "NULL");
 		} else if (value.getClass().getSimpleName().endsWith("[]")) {
 			// Simple name does support [] suffix and do not return NULL for
 			// inner anonymous classes
-			return customTypes.get("[]").encode(builder, value);
+			return customTypes.get("[]").encode(out, value);
 		} else if (customTypes.containsKey(value.getClass().getCanonicalName())) {
 			return customTypes.get(value.getClass().getCanonicalName())//
-					.encode(builder, value);
+					.encode(out, value);
 		} else if (value instanceof String) {
-			encodeString(builder, (String) value);
+			encodeString(out, (String) value);
 		} else if (value instanceof Boolean) {
-			builder.append(value);
+			write(out, value);
 		} else if (value instanceof Byte) {
-			builder.append(value).append('b');
+			write(out, value);
+			write(out, "b");
 		} else if (value instanceof Character) {
-			encodeString(builder, "" + value);
-			builder.append('c');
+			encodeString(out, "" + value);
+			write(out, "c");
 		} else if (value instanceof Short) {
-			builder.append(value).append('s');
+			write(out, value);
+			write(out, "s");
 		} else if (value instanceof Integer) {
-			builder.append(value);
+			write(out, value);
 		} else if (value instanceof Long) {
-			builder.append(value).append('L');
+			write(out, value);
+			write(out, "L");
 		} else if (value instanceof Float) {
-			builder.append(value).append('F');
+			write(out, value);
+			write(out, "F");
 		} else if (value instanceof Double) {
-			builder.append(value).append('d');
+			write(out, value);
+			write(out, "d");
 		} else if (value instanceof Enum) {
 			String type = value.getClass().getCanonicalName();
-			builder.append(type).append(".").append(((Enum<?>) value).name())
-					.append(";");
+			write(out, type);
+			write(out, ".");
+			write(out, ((Enum<?>) value).name());
+			write(out, ";");
 		} else {
 			return false;
 		}
@@ -457,6 +476,27 @@ public class SerialUtils {
 	}
 
 	/**
+	 * Write the given {@link String} into the given {@link OutputStream} in
+	 * UTF-8.
+	 * 
+	 * @param out
+	 *            the {@link OutputStream}
+	 * @param data
+	 *            the data to write, cannot be NULL
+	 * 
+	 * @throws IOException
+	 *             in case of I/O error
+	 */
+	static void write(OutputStream out, Object data) throws IOException {
+		try {
+			out.write(data.toString().getBytes("UTF-8"));
+		} catch (UnsupportedEncodingException e) {
+			// A conforming JVM is required to support UTF-8
+			e.printStackTrace();
+		}
+	}
+
+	/**
 	 * Return the corresponding class or throw an {@link Exception} if it
 	 * cannot.
 	 * 
@@ -507,7 +547,7 @@ public class SerialUtils {
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	private static Enum<?> decodeEnum(String escaped) {
+	static private Enum<?> decodeEnum(String escaped) {
 		// escaped: be.xxx.EnumType.VALUE;
 		int pos = escaped.lastIndexOf(".");
 		String type = escaped.substring(0, pos);
@@ -522,32 +562,56 @@ public class SerialUtils {
 	}
 
 	// aa bb -> "aa\tbb"
-	private static void encodeString(StringBuilder builder, String raw) {
-		builder.append('\"');
+	static void encodeString(OutputStream out, String raw) throws IOException {
+		out.write('\"');
+		// TODO !! utf-8 required
 		for (char car : raw.toCharArray()) {
-			switch (car) {
-			case '\\':
-				builder.append("\\\\");
-				break;
-			case '\r':
-				builder.append("\\r");
-				break;
-			case '\n':
-				builder.append("\\n");
-				break;
-			case '"':
-				builder.append("\\\"");
-				break;
-			default:
-				builder.append(car);
-				break;
+			encodeString(out, car);
+		}
+		out.write('\"');
+	}
+
+	// aa bb -> "aa\tbb"
+	static void encodeString(OutputStream out, InputStream raw)
+			throws IOException {
+		out.write('\"');
+		byte buffer[] = new byte[4069];
+		for (int len = 0; (len = raw.read(buffer)) > 0;) {
+			for (int i = 0; i < len; i++) {
+				// TODO: not 100% correct, look up howto for UTF-8
+				encodeString(out, (char) buffer[i]);
 			}
 		}
-		builder.append('\"');
+		out.write('\"');
+	}
+
+	// for encode string, NOT to encode a char by itself!
+	static void encodeString(OutputStream out, char raw) throws IOException {
+		switch (raw) {
+		case '\\':
+			out.write('\\');
+			out.write('\\');
+			break;
+		case '\r':
+			out.write('\\');
+			out.write('r');
+			break;
+		case '\n':
+			out.write('\\');
+			out.write('n');
+			break;
+		case '"':
+			out.write('\\');
+			out.write('\"');
+			break;
+		default:
+			out.write(raw);
+			break;
+		}
 	}
 
 	// "aa\tbb" -> aa bb
-	private static String decodeString(String escaped) {
+	static String decodeString(String escaped) {
 		StringBuilder builder = new StringBuilder();
 
 		boolean escaping = false;
