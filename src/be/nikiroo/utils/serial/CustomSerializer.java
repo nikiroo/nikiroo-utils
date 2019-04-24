@@ -14,28 +14,29 @@ public abstract class CustomSerializer {
 	protected abstract String getType();
 
 	/**
-	 * Encode the object into the given {@link OutputStream} if possible (if
-	 * supported).
+	 * Encode the object into the given {@link OutputStream} if supported.
 	 * 
 	 * @param out
 	 *            the builder to append to
 	 * @param value
 	 *            the object to encode
 	 * 
-	 * @return TRUE if success, FALSE if not (the content of the builder won't
-	 *         be changed in case of failure)
+	 * @return FALSE if the value is not supported, TRUE if the operation was
+	 *         successful (if the value is supported by the operation was not
+	 *         successful, you will get an {@link IOException})
 	 * 
 	 * @throws IOException
 	 *             in case of I/O error
 	 */
 	public boolean encode(OutputStream out, Object value) throws IOException {
-		InputStream customString = toStream(out, value);
+		if (!isSupported(value)) {
+			return false;
+		}
+
 		SerialUtils.write(out, "custom^");
 		SerialUtils.write(out, getType());
 		SerialUtils.write(out, "^");
-		if (!SerialUtils.encode(out, customString)) {
-			return false;
-		}
+		toStream(out, value);
 
 		return true;
 	}

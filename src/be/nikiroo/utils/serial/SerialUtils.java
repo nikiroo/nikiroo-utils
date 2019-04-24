@@ -56,38 +56,41 @@ public class SerialUtils {
 		// Array types:
 		customTypes.put("[]", new CustomSerializer() {
 			@Override
-			protected String toString(Object value) {
+			protected void toStream(OutputStream out, Object value)
+					throws IOException {
 				String type = value.getClass().getCanonicalName();
 				type = type.substring(0, type.length() - 2); // remove the []
 
-				StringBuilder builder = new StringBuilder();
-				builder.append(type).append("\n");
+				write(out,type);
+				write(out,"\n");
 				try {
 					for (int i = 0; true; i++) {
 						Object item = Array.get(value, i);
 						// encode it normally if direct value
-						if (!SerialUtils.encode(builder, item)) {
+						if (!SerialUtils.encode(out, item)) {
 							try {
-								// use ZIP: if not
-								new Exporter().append(item).appendTo(builder,
-										true, false);
+								// TODO: use ZIP: if not?
+								new Exporter(out).append(item);
 							} catch (NotSerializableException e) {
 								throw new UnknownFormatConversionException(e
 										.getMessage());
 							}
 						}
-						builder.append("\n");
+						write(out,"\n");
 					}
 				} catch (ArrayIndexOutOfBoundsException e) {
 					// Done.
 				}
-
-				return builder.toString();
 			}
 
 			@Override
 			protected String getType() {
 				return "[]";
+			}
+			
+			@Override
+			protected Object fromStream(InputStream in) throws IOException {
+				return null;
 			}
 
 			@Override
