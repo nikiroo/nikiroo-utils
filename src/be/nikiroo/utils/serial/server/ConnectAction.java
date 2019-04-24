@@ -199,8 +199,9 @@ abstract class ConnectAction {
 	 * @param data
 	 *            the data to send
 	 * 
-	 * @return the answer (which can be NULL) if this action is a client, always
-	 *         NULL if it is a server
+	 * @return the answer (which can be NULL if no answer, or NULL for an answer
+	 *         which is NULL) if this action is a client, always NULL if it is a
+	 *         server
 	 * 
 	 * @throws IOException
 	 *             in case of I/O error
@@ -216,10 +217,18 @@ abstract class ConnectAction {
 	protected Object sendObject(Object data) throws IOException,
 			NoSuchFieldException, NoSuchMethodException, ClassNotFoundException {
 		synchronized (lock) {
-			String rep = sendString(new Exporter().append(data).toString(true,
-					true));
-			if (rep != null) {
-				return new Importer().read(rep).getValue();
+			new Exporter(out).append(data);
+
+			if (server) {
+				out.flush();
+				return null;
+			}
+
+			contentToSend = true;
+			try {
+				return recObject();
+			} catch (NullPointerException e) {
+				// We accept no data here
 			}
 
 			return null;
@@ -253,12 +262,18 @@ abstract class ConnectAction {
 	protected Object recObject() throws IOException, NoSuchFieldException,
 			NoSuchMethodException, ClassNotFoundException,
 			java.lang.NullPointerException {
-		String str = recString();
-		if (str == null) {
-			throw new NullPointerException("No more data available");
-		}
+		synchronized (lock) {
+			if (server || contentToSend) {
+				if (contentToSend) {
+					out.flush();
+					contentToSend = false;
+				}
 
-		return new Importer().read(str).getValue();
+				return new Importer().read(in).getValue();
+			}
+
+			return null;
+		}
 	}
 
 	/**

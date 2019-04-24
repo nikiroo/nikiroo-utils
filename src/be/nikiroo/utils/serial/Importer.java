@@ -1,11 +1,14 @@
 package be.nikiroo.utils.serial;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 
+import be.nikiroo.utils.IOUtils;
+import be.nikiroo.utils.NextableInputStream;
+import be.nikiroo.utils.NextableInputStreamStep;
 import be.nikiroo.utils.StringUtils;
 
 /**
@@ -19,24 +22,12 @@ import be.nikiroo.utils.StringUtils;
  * @author niki
  */
 public class Importer {
-	static private Integer SIZE_ID = null;
-	static private byte[] NEWLINE = null;
-
 	private Boolean link;
 	private Object me;
 	private Importer child;
 	private Map<String, Object> map;
 
 	private String currentFieldName;
-
-	static {
-		try {
-			SIZE_ID = "EXT:".getBytes("UTF-8").length;
-			NEWLINE = "\n".getBytes("UTF-8");
-		} catch (UnsupportedEncodingException e) {
-			// UTF-8 is mandated to exist on confirming jre's
-		}
-	}
 
 	/**
 	 * Create a new {@link Importer}.
@@ -70,77 +61,44 @@ public class Importer {
 	 *             if a class described in the serialised data cannot be found
 	 * @throws IOException
 	 *             if the content cannot be read (for instance, corrupt data)
+	 * @throws NullPointerException
+	 *             if the stream is empty
 	 */
-	public Importer read(String data) throws NoSuchFieldException,
-			NoSuchMethodException, ClassNotFoundException, IOException {
-		return read(data.getBytes("UTF-8"), 0);
-	}
+	public Importer read(InputStream in) throws NoSuchFieldException,
+			NoSuchMethodException, ClassNotFoundException, IOException,
+			NullPointerException {
 
-	/**
-	 * Read some data into this {@link Importer}: it can be the full serialised
-	 * content, or a number of lines of it (any given line <b>MUST</b> be
-	 * complete though) and accumulate it with the already present data.
-	 * 
-	 * @param data
-	 *            the data to parse
-	 * @param offset
-	 *            the offset at which to start reading the data (we ignore
-	 *            anything that goes before that offset)
-	 * 
-	 * @return itself so it can be chained
-	 * 
-	 * @throws NoSuchFieldException
-	 *             if the serialised data contains information about a field
-	 *             which does actually not exist in the class we know of
-	 * @throws NoSuchMethodException
-	 *             if a class described in the serialised data cannot be created
-	 *             because it is not compatible with this code
-	 * @throws ClassNotFoundException
-	 *             if a class described in the serialised data cannot be found
-	 * @throws IOException
-	 *             if the content cannot be read (for instance, corrupt data)
-	 */
-	private Importer read(byte[] data, int offset) throws NoSuchFieldException,
-			NoSuchMethodException, ClassNotFoundException, IOException {
+		// TODO: fix NexInStream: next() MUST be called first time, too
+		// TODO: NexInStream: add getBytes() (size downloaded)
+		// TODO: public InputStrem open() (open/close do nothing)
+		// TODO: public boolean eof()
+		// TODO: public nextAll(): next, but disable separation of sub-streams
+		// TODO: close(alsoCloseIncludedField)
 
-		int dataStart = offset;
-		while (dataStart < data.length) {
-			String id = "";
-			if (data.length - dataStart >= SIZE_ID) {
-				id = new String(data, dataStart, SIZE_ID);
+		NextableInputStream stream = new NextableInputStream(in,
+				new NextableInputStreamStep('\n'));
+
+		if (in == null || stream.eof()) {
+			if (in == null) {
+				throw new NullPointerException("InputStream is null");
 			}
+			throw new NullPointerException("InputStream is empty");
+		}
 
-			boolean zip = id.equals("ZIP:");
-			boolean b64 = id.equals("B64:");
-			if (zip || b64) {
-				dataStart += SIZE_ID;
-			}
-
-			int count = find(data, dataStart, NEWLINE);
-			count -= dataStart;
-			if (count < 0) {
-				count = data.length - dataStart;
-			}
+		while (stream.next()) {
+			boolean zip = stream.startsWiths("ZIP:");
+			boolean b64 = stream.startsWiths("B64:");
 
 			if (zip || b64) {
-				boolean unpacked = false;
+				InputStream decoded = StringUtils.unbase64(stream.open(), zip);
 				try {
-					byte[] line = StringUtils.unbase64(data, dataStart, count,
-							zip);
-					unpacked = true;
-					read(line, 0);
-				} catch (IOException e) {
-					throw new IOException("Internal error when decoding "
-							+ (unpacked ? "unpacked " : "")
-							+ (zip ? "ZIP" : "B64")
-							+ " content: input may be corrupt");
+					read(decoded);
+				} finally {
+					decoded.close();
 				}
 			} else {
-				String line = new String(data, dataStart, count, "UTF-8");
-				processLine(line);
+				processLine(stream);
 			}
-
-			dataStart += count + NEWLINE.length;
 		}
 
 		return this;
@@ -166,11 +124,12 @@ public class Importer {
 	 * @throws IOException
 	 *             if the content cannot be read (for instance, corrupt data)
 	 */
-	private boolean processLine(String line) throws NoSuchFieldException,
+	private boolean processLine(InputStream in) throws NoSuchFieldException,
 			NoSuchMethodException, ClassNotFoundException, IOException {
+
 		// Defer to latest child if any
 		if (child != null) {
-			if (child.processLine(line)) {
+			if (child.processLine(in)) {
 				if (currentFieldName != null) {
 					setField(currentFieldName, child.getValue());
 					currentFieldName = null;
@@ -180,6 +139,9 @@ public class Importer {
 
 			return false;
 		}
+
+		// TODO use the stream, Luke
+		String line = IOUtils.readSmallStream(in);
 
 		if (line.equals("{")) { // START: new child if needed
 			if (link != null) {

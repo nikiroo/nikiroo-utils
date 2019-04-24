@@ -16,7 +16,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.UnknownFormatConversionException;
 
+import be.nikiroo.utils.IOUtils;
 import be.nikiroo.utils.Image;
+import be.nikiroo.utils.NextableInputStream;
+import be.nikiroo.utils.NextableInputStreamStep;
+import be.nikiroo.utils.StringUtils;
 
 /**
  * Small class to help with serialisation.
@@ -58,11 +62,13 @@ public class SerialUtils {
 			@Override
 			protected void toStream(OutputStream out, Object value)
 					throws IOException {
+				// TODO: we use \n to separate, and b64 to un-\n -- but we could
+				// use \\n ?
 				String type = value.getClass().getCanonicalName();
 				type = type.substring(0, type.length() - 2); // remove the []
 
-				write(out,type);
-				write(out,"\n");
+				write(out, type);
+				write(out, "\n");
 				try {
 					for (int i = 0; true; i++) {
 						Object item = Array.get(value, i);
@@ -76,7 +82,7 @@ public class SerialUtils {
 										.getMessage());
 							}
 						}
-						write(out,"\n");
+						write(out, "\n");
 					}
 				} catch (ArrayIndexOutOfBoundsException e) {
 					// Done.
@@ -84,25 +90,24 @@ public class SerialUtils {
 			}
 
 			@Override
-			protected String getType() {
-				return "[]";
-			}
-			
-			@Override
 			protected Object fromStream(InputStream in) throws IOException {
-				return null;
-			}
-
-			@Override
-			protected Object fromString(String content) throws IOException {
-				String[] tab = content.split("\n");
+				NextableInputStream stream = new NextableInputStream(in,
+						new NextableInputStreamStep('\n'));
 
 				try {
+					List<Object> list = new ArrayList<Object>();
+					stream.next();
+					String type = IOUtils.readSmallStream(stream);
+
+					while (stream.next()) {
+						Object value = new Importer().read(stream).getValue();
+						list.add(value);
+					}
+
 					Object array = Array.newInstance(
-							SerialUtils.getClass(tab[0]), tab.length - 1);
-					for (int i = 1; i < tab.length; i++) {
-						Object value = new Importer().read(tab[i]).getValue();
-						Array.set(array, i - 1, value);
+							SerialUtils.getClass(type), list.size());
+					for (int i = 0; i < list.size(); i++) {
+						Array.set(array, i, list.get(i));
 					}
 
 					return array;
@@ -113,23 +118,34 @@ public class SerialUtils {
 					throw new IOException(e.getMessage());
 				}
 			}
+
+			@Override
+			protected String getType() {
+				return "[]";
+			}
 		});
 
 		// URL:
 		customTypes.put("java.net.URL", new CustomSerializer() {
+
 			@Override
-			protected String toString(Object value) {
+			protected void toStream(OutputStream out, Object value)
+					throws IOException {
+				String val = "";
 				if (value != null) {
-					return ((URL) value).toString();
+					val = ((URL) value).toString();
 				}
-				return null;
+
+				out.write(val.getBytes("UTF-8"));
 			}
 
 			@Override
-			protected Object fromString(String content) throws IOException {
-				if (content != null) {
-					return new URL(content);
+			protected Object fromStream(InputStream in) throws IOException {
+				String val = IOUtils.readSmallStream(in);
+				if (!val.isEmpty()) {
+					return new URL(val);
 				}
+
 				return null;
 			}
 
@@ -142,8 +158,20 @@ public class SerialUtils {
 		// Images (this is currently the only supported image type by default)
 		customTypes.put("be.nikiroo.utils.Image", new CustomSerializer() {
 			@Override
-			protected String toString(Object value) {
-				return ((Image) value).toBase64();
+			protected void toStream(OutputStream out, Object value)
+					throws IOException {
+				Image img = (Image) value;
+				OutputStream encoded = StringUtils.base64(out, false, false);
+				try {
+					InputStream in = img.newInputStream();
+					try {
+						IOUtils.write(in, encoded);
+					} finally {
+						in.close();
+					}
+				} finally {
+					encoded.close();
+				}
 			}
 
 			@Override
@@ -152,9 +180,9 @@ public class SerialUtils {
 			}
 
 			@Override
-			protected Object fromString(String content) {
+			protected Object fromStream(InputStream in) throws IOException {
 				try {
-					return new Image(content);
+					return new Image(in);
 				} catch (IOException e) {
 					throw new UnknownFormatConversionException(e.getMessage());
 				}
