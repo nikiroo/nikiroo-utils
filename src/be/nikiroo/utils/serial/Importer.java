@@ -72,10 +72,10 @@ public class Importer {
 				new NextableInputStreamStep('\n'));
 
 		try {
-			if (in == null || stream.eof()) {
-				if (in == null) {
-					throw new NullPointerException("InputStream is null");
-				}
+			if (in == null) {
+				throw new NullPointerException("InputStream is null");
+			}
+			if (stream.eof()) {
 				throw new NullPointerException("InputStream is empty");
 			}
 

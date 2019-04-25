@@ -5,7 +5,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.NotSerializableException;
-import java.net.URL;
 import java.util.Arrays;
 
 import be.nikiroo.utils.serial.Exporter;
