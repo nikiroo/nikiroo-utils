@@ -21,6 +21,15 @@ class SerialTest extends TestLauncher {
 		this(null);
 	}
 
+	private void encodeRecodeTest(TestCase test, Object data) throws Exception {
+		byte[] encoded = toBytes(data);
+		Object redata = fromBytes(encoded);
+		byte[] reencoded = toBytes(redata);
+
+		test.assertEquals("Different data after encode/decode/encode", true,
+				Arrays.equals(encoded, reencoded));
+	}
+
 	// try to remove pointer addresses
 	private byte[] toBytes(Object data) throws NotSerializableException,
 			IOException {
@@ -51,13 +60,7 @@ class SerialTest extends TestLauncher {
 			@Override
 			public void test() throws Exception {
 				Data data = new Data(42);
-
-				byte[] encoded = toBytes(data);
-				Object redata = fromBytes(encoded);
-				byte[] reencoded = toBytes(redata);
-
-				assertEquals("Different data after encode/decode/encode", true,
-						Arrays.equals(encoded, reencoded));
+				encodeRecodeTest(this, data);
 			}
 		});
 
@@ -71,13 +74,7 @@ class SerialTest extends TestLauncher {
 					@SuppressWarnings("unused")
 					int value = 42;
 				};
-				String encoded = new Exporter().append(data).toString(false,
-						false);
-				Object redata = new Importer().read(encoded).getValue();
-				String reencoded = new Exporter().append(redata).toString(
-						false, false);
-				assertEquals(encoded.replaceAll("@[0-9]*", "@REF"),
-						reencoded.replaceAll("@[0-9]*", "@REF"));
+				encodeRecodeTest(this, data);
 			}
 		});
 		addTest(new TestCase() {
@@ -90,25 +87,21 @@ class SerialTest extends TestLauncher {
 					@SuppressWarnings("unused")
 					int value = 42;
 				} };
-				String encoded = new Exporter().append(data).toString(false,
-						false);
-				Object redata = new Importer().read(encoded).getValue();
-				String reencoded = new Exporter().append(redata).toString(
-						false, false);
-				// Comparing the 2 strings won't be useful, because the @REFs
-				// will be ZIP-encoded; so we parse and re-encode the object
-				encoded = new Exporter().append(data[0]).toString(false, false);
-				try {
-					reencoded = new Exporter().append(((Data[]) redata)[0])
-							.toString(false, false);
-				} catch (Exception e) {
-					fail("Cannot cast the returned data into its original object",
-							e);
-				}
-				assertEquals(encoded.replaceAll("@[0-9]*", "@REF"),
-						reencoded.replaceAll("@[0-9]*", "@REF"));
+				
+				byte[] encoded = toBytes(data);
+				Object redata = fromBytes(encoded);
+				
+				// Comparing the 2 arrays won't be useful, because the @REFs
+				// will be ZIP-encoded; so we parse and re-encode each object
+				
+				byte[] encoded1 = toBytes(data[0]);
+				byte[] reencoded1 = toBytes(((Data[])redata)[0]);
+
+				assertEquals("Different data after encode/decode/encode", true,
+						Arrays.equals(encoded1, reencoded1));
 			}
 		});
+		/*
 		addTest(new TestCase("URL Import/Export") {
 			@Override
 			public void test() throws Exception {
@@ -264,6 +257,7 @@ class SerialTest extends TestLauncher {
 				assertEquals("Items not identical after ZIP", data, redata);
 			}
 		});
+		*/
 	}
 
 	class DataArray {
