@@ -69,21 +69,24 @@ public class SerialUtils {
 				type = type.substring(0, type.length() - 2); // remove the []
 
 				write(out, type);
-				write(out, "\n");
+				write(out, "\r");
 				try {
 					for (int i = 0; true; i++) {
 						Object item = Array.get(value, i);
 						// encode it normally if direct value
 						if (!SerialUtils.encode(out, item)) {
 							try {
-								// TODO: use ZIP: if not?
-								new Exporter(out).append(item);
+								// TODO: bad escaping?
+								write(out, "B64:");
+								OutputStream bout = StringUtils.base64(out,
+										false, false);
+								new Exporter(bout).append(item);
 							} catch (NotSerializableException e) {
 								throw new UnknownFormatConversionException(e
 										.getMessage());
 							}
 						}
-						write(out, "\n");
+						write(out, "\r");
 					}
 				} catch (ArrayIndexOutOfBoundsException e) {
 					// Done.
@@ -93,7 +96,7 @@ public class SerialUtils {
 			@Override
 			protected Object fromStream(InputStream in) throws IOException {
 				NextableInputStream stream = new NextableInputStream(in,
-						new NextableInputStreamStep('\n'));
+						new NextableInputStreamStep('\r'));
 
 				try {
 					List<Object> list = new ArrayList<Object>();
@@ -128,7 +131,6 @@ public class SerialUtils {
 
 		// URL:
 		customTypes.put("java.net.URL", new CustomSerializer() {
-
 			@Override
 			protected void toStream(OutputStream out, Object value)
 					throws IOException {

@@ -84,6 +84,7 @@ public class Importer {
 				boolean b64 = stream.startsWiths("B64:");
 
 				if (zip || b64) {
+					stream.skip("XXX:".length());
 					InputStream decoded = StringUtils.unbase64(stream.open(),
 							zip);
 					try {

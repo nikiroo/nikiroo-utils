@@ -22,23 +22,28 @@ class SerialTest extends TestLauncher {
 	}
 
 	private void encodeRecodeTest(TestCase test, Object data) throws Exception {
-		byte[] encoded = toBytes(data);
+		byte[] encoded = toBytes(data,true);
 		Object redata = fromBytes(encoded);
-		byte[] reencoded = toBytes(redata);
+		byte[] reencoded = toBytes(redata,true);
 
 		test.assertEquals("Different data after encode/decode/encode", true,
 				Arrays.equals(encoded, reencoded));
 	}
 
 	// try to remove pointer addresses
-	private byte[] toBytes(Object data) throws NotSerializableException,
+	private byte[] toBytes(Object data, boolean clearRefs) throws NotSerializableException,
 			IOException {
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		new Exporter(out).append(data);
 		out.flush();
+		
+		if(clearRefs){
 		String tmp = new String(out.toByteArray(), "UTF-8");
 		tmp = tmp.replaceAll("@[0-9]*", "@REF");
 		return tmp.getBytes("UTF-8");
+		}
+		
+		return out.toByteArray();
 	}
 
 	private Object fromBytes(byte[] data) throws NoSuchFieldException,
@@ -86,16 +91,16 @@ class SerialTest extends TestLauncher {
 				Data[] data = new Data[] { new Data() {
 					@SuppressWarnings("unused")
 					int value = 42;
-				} };
+				}};
 				
-				byte[] encoded = toBytes(data);
+				byte[] encoded = toBytes(data,false);
 				Object redata = fromBytes(encoded);
 				
 				// Comparing the 2 arrays won't be useful, because the @REFs
 				// will be ZIP-encoded; so we parse and re-encode each object
 				
-				byte[] encoded1 = toBytes(data[0]);
-				byte[] reencoded1 = toBytes(((Data[])redata)[0]);
+				byte[] encoded1 = toBytes(data[0],true);
+				byte[] reencoded1 = toBytes(((Data[])redata)[0],true);
 
 				assertEquals("Different data after encode/decode/encode", true,
 						Arrays.equals(encoded1, reencoded1));

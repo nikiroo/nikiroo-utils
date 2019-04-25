@@ -44,7 +44,6 @@ public abstract class CustomSerializer {
 
 	public Object decode(InputStream in) throws IOException {
 		// TODO: manage ENTER
-		// TODO read and skip "custom^......^": next(), next(), nextAll() ?
 		NextableInputStream stream = new NextableInputStream(in,
 				new NextableInputStreamStep('^'));
 
