@@ -1,6 +1,8 @@
 package be.nikiroo.utils.serial.server;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Array;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -123,6 +125,7 @@ public class ServerBridge extends Server {
 
 	@Override
 	protected ConnectActionServer createConnectActionServer(Socket s) {
+		// Bad impl, not up to date (should work, but not efficient)
 		return new ConnectActionServerString(s, key) {
 			@Override
 			public void action(final Version clientVersion) throws Exception {
@@ -226,6 +229,7 @@ public class ServerBridge extends Server {
 	 *            the data to trace
 	 */
 	private void trace(String prefix, String data) {
+		// TODO: we convert to string and back
 		int size = data == null ? 0 : data.length();
 		String ssize = StringUtils.formatNumber(size) + "bytes";
 
@@ -241,22 +245,29 @@ public class ServerBridge extends Server {
 					}
 				}
 
-				Object obj = new Importer().read(data).getValue();
-				if (obj == null) {
-					getTraceHandler().trace("NULL", 2);
-					getTraceHandler().trace("NULL", 3);
-					getTraceHandler().trace("NULL", 4);
-				} else {
-					if (obj.getClass().isArray()) {
-						getTraceHandler().trace(
-								"(" + obj.getClass() + ") with "
-										+ Array.getLength(obj) + "element(s)",
-								3);
+				InputStream stream = new ByteArrayInputStream(
+						data.getBytes("UTF-8"));
+				try {
+					Object obj = new Importer().read(stream).getValue();
+					if (obj == null) {
+						getTraceHandler().trace("NULL", 2);
+						getTraceHandler().trace("NULL", 3);
+						getTraceHandler().trace("NULL", 4);
 					} else {
-						getTraceHandler().trace("(" + obj.getClass() + ")", 2);
+						if (obj.getClass().isArray()) {
+							getTraceHandler().trace(
+									"(" + obj.getClass() + ") with "
+											+ Array.getLength(obj)
+											+ "element(s)", 3);
+						} else {
+							getTraceHandler().trace("(" + obj.getClass() + ")",
+									2);
+						}
+						getTraceHandler().trace("" + obj.toString(), 3);
+						getTraceHandler().trace(data, 4);
 					}
-					getTraceHandler().trace("" + obj.toString(), 3);
-					getTraceHandler().trace(data, 4);
+				} finally {
+					stream.close();
 				}
 			} catch (NoSuchMethodException e) {
 				getTraceHandler().trace("(not an object)", 2);

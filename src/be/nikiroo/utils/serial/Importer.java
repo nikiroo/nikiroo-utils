@@ -68,37 +68,35 @@ public class Importer {
 			NoSuchMethodException, ClassNotFoundException, IOException,
 			NullPointerException {
 
-		// TODO: fix NexInStream: next() MUST be called first time, too
-		// TODO: NexInStream: add getBytes() (size downloaded)
-		// TODO: public InputStrem open() (open/close do nothing)
-		// TODO: public boolean eof()
-		// TODO: public nextAll(): next, but disable separation of sub-streams
-		// TODO: close(alsoCloseIncludedField)
-
 		NextableInputStream stream = new NextableInputStream(in,
 				new NextableInputStreamStep('\n'));
 
-		if (in == null || stream.eof()) {
-			if (in == null) {
-				throw new NullPointerException("InputStream is null");
-			}
-			throw new NullPointerException("InputStream is empty");
-		}
-
-		while (stream.next()) {
-			boolean zip = stream.startsWiths("ZIP:");
-			boolean b64 = stream.startsWiths("B64:");
-
-			if (zip || b64) {
-				InputStream decoded = StringUtils.unbase64(stream.open(), zip);
-				try {
-					read(decoded);
-				} finally {
-					decoded.close();
+		try {
+			if (in == null || stream.eof()) {
+				if (in == null) {
+					throw new NullPointerException("InputStream is null");
 				}
-			} else {
-				processLine(stream);
+				throw new NullPointerException("InputStream is empty");
 			}
+
+			while (stream.next()) {
+				boolean zip = stream.startsWiths("ZIP:");
+				boolean b64 = stream.startsWiths("B64:");
+
+				if (zip || b64) {
+					InputStream decoded = StringUtils.unbase64(stream.open(),
+							zip);
+					try {
+						read(decoded);
+					} finally {
+						decoded.close();
+					}
+				} else {
+					processLine(stream);
+				}
+			}
+		} finally {
+			stream.close(false);
 		}
 
 		return this;
@@ -215,37 +213,6 @@ public class Importer {
 					"Internal error when setting \"%s.%s\": %s", me.getClass()
 							.getCanonicalName(), name, e.getMessage()));
 		}
-	}
-
-	/**
-	 * Find the given needle in the data and return its position (or -1 if not
-	 * found).
-	 * 
-	 * @param data
-	 *            the data to look through
-	 * @param offset
-	 *            the offset at wich to start searching
-	 * @param needle
-	 *            the needle to find
-	 * 
-	 * @return the position of the needle if found, -1 if not found
-	 */
-	private int find(byte[] data, int offset, byte[] needle) {
-		for (int i = offset; i + needle.length - 1 < data.length; i++) {
-			boolean same = true;
-			for (int j = 0; j < needle.length; j++) {
-				if (data[i + j] != needle[j]) {
-					same = false;
-					break;
-				}
-			}
-
-			if (same) {
-				return i;
-			}
-		}
-
-		return -1;
 	}
 
 	/**

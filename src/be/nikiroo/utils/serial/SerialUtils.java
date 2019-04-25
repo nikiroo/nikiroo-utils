@@ -1,5 +1,6 @@
 package be.nikiroo.utils.serial;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.NotSerializableException;
@@ -246,7 +247,7 @@ public class SerialUtils {
 					ctor = clazz.getDeclaredConstructor(classes
 							.toArray(new Class[] {}));
 				} catch (NoSuchMethodException nsme) {
-					// TODO: it seems e do not always need a parameter for each
+					// TODO: it seems we do not always need a parameter for each
 					// level, so we currently try "ALL" levels or "FIRST" level
 					// only -> we should check the actual rule and use it
 					ctor = clazz.getDeclaredConstructor(classes.get(0));
@@ -469,7 +470,14 @@ public class SerialUtils {
 				// custom:TYPE_NAME:"content is String-encoded"
 				String type = CustomSerializer.typeOf(encodedValue);
 				if (customTypes.containsKey(type)) {
-					return customTypes.get(type).decode(encodedValue);
+					// TODO: we should start with a stream
+					InputStream streamEncodedValue = new ByteArrayInputStream(
+							encodedValue.getBytes("UTF-8"));
+					try {
+						return customTypes.get(type).decode(streamEncodedValue);
+					} finally {
+						streamEncodedValue.close();
+					}
 				}
 				throw new IOException("Unknown custom type: " + type);
 			} else if (encodedValue.equals("NULL")
@@ -606,7 +614,7 @@ public class SerialUtils {
 	static void encodeString(OutputStream out, InputStream raw)
 			throws IOException {
 		out.write('\"');
-		byte buffer[] = new byte[4069];
+		byte buffer[] = new byte[4096];
 		for (int len = 0; (len = raw.read(buffer)) > 0;) {
 			for (int i = 0; i < len; i++) {
 				// TODO: not 100% correct, look up howto for UTF-8
