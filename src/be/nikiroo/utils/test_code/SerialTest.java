@@ -22,27 +22,27 @@ class SerialTest extends TestLauncher {
 	}
 
 	private void encodeRecodeTest(TestCase test, Object data) throws Exception {
-		byte[] encoded = toBytes(data,true);
+		byte[] encoded = toBytes(data, true);
 		Object redata = fromBytes(encoded);
-		byte[] reencoded = toBytes(redata,true);
+		byte[] reencoded = toBytes(redata, true);
 
 		test.assertEquals("Different data after encode/decode/encode", true,
 				Arrays.equals(encoded, reencoded));
 	}
 
 	// try to remove pointer addresses
-	private byte[] toBytes(Object data, boolean clearRefs) throws NotSerializableException,
-			IOException {
+	private byte[] toBytes(Object data, boolean clearRefs)
+			throws NotSerializableException, IOException {
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		new Exporter(out).append(data);
 		out.flush();
-		
-		if(clearRefs){
-		String tmp = new String(out.toByteArray(), "UTF-8");
-		tmp = tmp.replaceAll("@[0-9]*", "@REF");
-		return tmp.getBytes("UTF-8");
+
+		if (clearRefs) {
+			String tmp = new String(out.toByteArray(), "UTF-8");
+			tmp = tmp.replaceAll("@[0-9]*", "@REF");
+			return tmp.getBytes("UTF-8");
 		}
-		
+
 		return out.toByteArray();
 	}
 
@@ -91,47 +91,33 @@ class SerialTest extends TestLauncher {
 				Data[] data = new Data[] { new Data() {
 					@SuppressWarnings("unused")
 					int value = 42;
-				}};
-				
-				byte[] encoded = toBytes(data,false);
+				} };
+
+				byte[] encoded = toBytes(data, false);
 				Object redata = fromBytes(encoded);
-				
+
 				// Comparing the 2 arrays won't be useful, because the @REFs
 				// will be ZIP-encoded; so we parse and re-encode each object
-				
-				byte[] encoded1 = toBytes(data[0],true);
-				byte[] reencoded1 = toBytes(((Data[])redata)[0],true);
+
+				byte[] encoded1 = toBytes(data[0], true);
+				byte[] reencoded1 = toBytes(((Object[]) redata)[0], true);
 
 				assertEquals("Different data after encode/decode/encode", true,
 						Arrays.equals(encoded1, reencoded1));
 			}
 		});
-		/*
 		addTest(new TestCase("URL Import/Export") {
 			@Override
 			public void test() throws Exception {
 				URL data = new URL("https://fanfan.be/");
-				String encoded = new Exporter().append(data).toString(false,
-						false);
-				Object redata = new Importer().read(encoded).getValue();
-				String reencoded = new Exporter().append(redata).toString(
-						false, false);
-				assertEquals(encoded.replaceAll("@[0-9]*", "@REF"),
-						reencoded.replaceAll("@[0-9]*", "@REF"));
+				encodeRecodeTest(this, data);
 			}
 		});
 		addTest(new TestCase("URL-String Import/Export") {
 			@Override
 			public void test() throws Exception {
 				String data = new URL("https://fanfan.be/").toString();
-				String encoded = new Exporter().append(data).toString(false,
-						false);
-				Object redata = new Importer().read(encoded).getValue();
-				String reencoded = new Exporter().append(redata).toString(
-						false, false);
-				assertEquals(encoded.replaceAll("@[0-9]*", "@REF"),
-						reencoded.replaceAll("@[0-9]*", "@REF"));
-				assertEquals(data, redata);
+				encodeRecodeTest(this, data);
 			}
 		});
 		addTest(new TestCase("URL/URL-String arrays Import/Export") {
@@ -139,28 +125,29 @@ class SerialTest extends TestLauncher {
 			public void test() throws Exception {
 				final String url = "https://fanfan.be/";
 				Object[] data = new Object[] { new URL(url), url };
-				String encoded = new Exporter().append(data).toString(false,
-						false);
-				Object redata = new Importer().read(encoded).getValue();
-				String reencoded = new Exporter().append(redata).toString(
-						false, false);
-				assertEquals(encoded.replaceAll("@[0-9]*", "@REF"),
-						reencoded.replaceAll("@[0-9]*", "@REF"));
-				assertEquals(data[0], ((Object[]) redata)[0]);
-				assertEquals(data[1], ((Object[]) redata)[1]);
+
+				byte[] encoded = toBytes(data, false);
+				Object redata = fromBytes(encoded);
+
+				// Comparing the 2 arrays won't be useful, because the @REFs
+				// will be ZIP-encoded; so we parse and re-encode each object
+
+				byte[] encoded1 = toBytes(data[0], true);
+				byte[] reencoded1 = toBytes(((Object[]) redata)[0], true);
+				byte[] encoded2 = toBytes(data[0], true);
+				byte[] reencoded2 = toBytes(((Object[]) redata)[1], true);
+
+				assertEquals("Different data 1 after encode/decode/encode",
+						true, Arrays.equals(encoded1, reencoded1));
+				assertEquals("Different data 2 after encode/decode/encode",
+						true, Arrays.equals(encoded2, reencoded2));
 			}
 		});
 		addTest(new TestCase("Import/Export with nested objects") {
 			@Override
 			public void test() throws Exception {
 				Data data = new DataObject(new Data(21));
-				String encoded = new Exporter().append(data).toString(false,
-						false);
-				Object redata = new Importer().read(encoded).getValue();
-				String reencoded = new Exporter().append(redata).toString(
-						false, false);
-				assertEquals(encoded.replaceAll("@[0-9]*", "@REF"),
-						reencoded.replaceAll("@[0-9]*", "@REF"));
+				encodeRecodeTest(this, data);
 			}
 		});
 		addTest(new TestCase("Import/Export with nested objects forming a loop") {
@@ -169,100 +156,30 @@ class SerialTest extends TestLauncher {
 				DataLoop data = new DataLoop("looping");
 				data.next = new DataLoop("level 2");
 				data.next.next = data;
-				String encoded = new Exporter().append(data).toString(false,
-						false);
-				Object redata = new Importer().read(encoded).getValue();
-				String reencoded = new Exporter().append(redata).toString(
-						false, false);
-				assertEquals(encoded.replaceAll("@[0-9]*", "@REF"),
-						reencoded.replaceAll("@[0-9]*", "@REF"));
+				encodeRecodeTest(this, data);
 			}
 		});
 		addTest(new TestCase("Array in Object Import/Export") {
 			@Override
 			public void test() throws Exception {
 				Object data = new DataArray();// new String[] { "un", "deux" };
-				String encoded = new Exporter().append(data).toString(false,
-						false);
-				Object redata = new Importer().read(encoded).getValue();
-				String reencoded = new Exporter().append(redata).toString(
-						false, false);
-				assertEquals(encoded.replaceAll("@[0-9]*", "@REF"),
-						reencoded.replaceAll("@[0-9]*", "@REF"));
+				encodeRecodeTest(this, data);
 			}
 		});
 		addTest(new TestCase("Array Import/Export") {
 			@Override
 			public void test() throws Exception {
 				Object data = new String[] { "un", "deux" };
-				String encoded = new Exporter().append(data).toString(false,
-						false);
-				Object redata = new Importer().read(encoded).getValue();
-				String reencoded = new Exporter().append(redata).toString(
-						false, false);
-				assertEquals(encoded.replaceAll("@[0-9]*", "@REF"),
-						reencoded.replaceAll("@[0-9]*", "@REF"));
+				encodeRecodeTest(this, data);
 			}
 		});
 		addTest(new TestCase("Enum Import/Export") {
 			@Override
 			public void test() throws Exception {
 				Object data = EnumToSend.FANFAN;
-				String encoded = new Exporter().append(data).toString(false,
-						false);
-				Object redata = new Importer().read(encoded).getValue();
-				String reencoded = new Exporter().append(redata).toString(
-						false, false);
-				assertEquals(encoded.replaceAll("@[0-9]*", "@REF"),
-						reencoded.replaceAll("@[0-9]*", "@REF"));
+				encodeRecodeTest(this, data);
 			}
 		});
-		addTest(new TestCase("B64 and ZIP String test") {
-			@Override
-			public void test() throws Exception {
-				Object data = "Fanfan la tulipe";
-				String encoded = new Exporter().append(data).toString(true,
-						false);
-				String redata = (String) new Importer().read(encoded)
-						.getValue();
-				assertEquals("Items not identical after B64", data, redata);
-				encoded = new Exporter().append(data).toString(true, true);
-				redata = (String) new Importer().read(encoded).getValue();
-				assertEquals("Items not identical after ZIP", data, redata);
-			}
-		});
-		addTest(new TestCase("B64 and ZIP Data test") {
-			@Override
-			public void test() throws Exception {
-				Object data = new Data(55);
-				String encoded = new Exporter().append(data).toString(true,
-						false);
-				Data redata = (Data) new Importer().read(encoded).getValue();
-				assertEquals("Items not identical after B64", data, redata);
-				encoded = new Exporter().append(data).toString(true, true);
-				redata = (Data) new Importer().read(encoded).getValue();
-				assertEquals("Items not identical after ZIP", data, redata);
-			}
-		});
-		addTest(new TestCase("B64 and ZIP 70000 chars test") {
-			@Override
-			public void test() throws Exception {
-				StringBuilder builder = new StringBuilder();
-				for (int i = 0; i < 7000; i++) {
-					builder.append("0123456789");
-				}
-				Object data = builder.toString();
-				String encoded = new Exporter().append(data).toString(true,
-						false);
-				String redata = (String) new Importer().read(encoded)
-						.getValue();
-				assertEquals("Items not identical after B64", data, redata);
-				encoded = new Exporter().append(data).toString(true, true);
-				redata = (String) new Importer().read(encoded).getValue();
-				assertEquals("Items not identical after ZIP", data, redata);
-			}
-		});
-		*/
 	}
 
 	class DataArray {
