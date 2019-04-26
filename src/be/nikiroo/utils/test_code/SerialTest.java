@@ -23,11 +23,18 @@ class SerialTest extends TestLauncher {
 
 	private void encodeRecodeTest(TestCase test, Object data) throws Exception {
 		byte[] encoded = toBytes(data, true);
-		Object redata = fromBytes(encoded);
+		Object redata = fromBytes(toBytes(data, false));
 		byte[] reencoded = toBytes(redata, true);
 
-		test.assertEquals("Different data after encode/decode/encode", true,
-				Arrays.equals(encoded, reencoded));
+		// We suppose text mode
+		if (encoded.length < 256 && reencoded.length < 256) {
+			test.assertEquals("Different data after encode/decode/encode",
+					new String(encoded, "UTF-8"),
+					new String(reencoded, "UTF-8"));
+		} else {
+			test.assertEquals("Different data after encode/decode/encode",
+					true, Arrays.equals(encoded, reencoded));
+		}
 	}
 
 	// try to remove pointer addresses
@@ -134,7 +141,7 @@ class SerialTest extends TestLauncher {
 
 				byte[] encoded1 = toBytes(data[0], true);
 				byte[] reencoded1 = toBytes(((Object[]) redata)[0], true);
-				byte[] encoded2 = toBytes(data[0], true);
+				byte[] encoded2 = toBytes(data[1], true);
 				byte[] reencoded2 = toBytes(((Object[]) redata)[1], true);
 
 				assertEquals("Different data 1 after encode/decode/encode",
