@@ -7,8 +7,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import be.nikiroo.utils.IOUtils;
-import be.nikiroo.utils.NextableInputStream;
-import be.nikiroo.utils.NextableInputStreamStep;
+import be.nikiroo.utils.streams.NextableInputStream;
+import be.nikiroo.utils.streams.NextableInputStreamStep;
 import be.nikiroo.utils.StringUtils;
 
 /**

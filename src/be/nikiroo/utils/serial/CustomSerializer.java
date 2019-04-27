@@ -5,8 +5,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 import be.nikiroo.utils.IOUtils;
-import be.nikiroo.utils.NextableInputStream;
-import be.nikiroo.utils.NextableInputStreamStep;
+import be.nikiroo.utils.streams.NextableInputStream;
+import be.nikiroo.utils.streams.NextableInputStreamStep;
 
 public abstract class CustomSerializer {
 
