@@ -20,6 +20,9 @@ public class Exporter {
 
 	/**
 	 * Create a new {@link Exporter}.
+	 * 
+	 * @param out
+	 *            export the data to this stream
 	 */
 	public Exporter(OutputStream out) {
 		if (out == null) {

@@ -7,9 +7,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 import be.nikiroo.utils.IOUtils;
+import be.nikiroo.utils.StringUtils;
 import be.nikiroo.utils.streams.NextableInputStream;
 import be.nikiroo.utils.streams.NextableInputStreamStep;
-import be.nikiroo.utils.StringUtils;
 
 /**
  * A simple class that can accept the output of {@link Exporter} to recreate
@@ -46,7 +46,7 @@ public class Importer {
 	 * content, or a number of lines of it (any given line <b>MUST</b> be
 	 * complete though) and accumulate it with the already present data.
 	 * 
-	 * @param data
+	 * @param in
 	 *            the data to parse
 	 * 
 	 * @return itself so it can be chained
@@ -107,7 +107,7 @@ public class Importer {
 	 * Read a single (whole) line of serialised data into this {@link Importer}
 	 * and accumulate it with the already present data.
 	 * 
-	 * @param line
+	 * @param in
 	 *            the line to parse
 	 * 
 	 * @return TRUE if we are just done with one object or sub-object

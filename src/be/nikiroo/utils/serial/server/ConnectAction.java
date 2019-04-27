@@ -217,6 +217,7 @@ abstract class ConnectAction {
 	protected Object sendObject(Object data) throws IOException,
 			NoSuchFieldException, NoSuchMethodException, ClassNotFoundException {
 		synchronized (lock) {
+
 			new Exporter(out).append(data);
 
 			if (server) {
@@ -268,7 +269,7 @@ abstract class ConnectAction {
 					out.flush();
 					contentToSend = false;
 				}
-
+				
 				return new Importer().read(in).getValue();
 			}
 

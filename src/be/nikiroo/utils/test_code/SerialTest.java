@@ -75,7 +75,6 @@ class SerialTest extends TestLauncher {
 				encodeRecodeTest(this, data);
 			}
 		});
-
 		addTest(new TestCase() {
 			@SuppressWarnings("unused")
 			private TestCase me = setName("Anonymous inner class");

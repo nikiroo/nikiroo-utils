@@ -19,9 +19,9 @@ import java.util.UnknownFormatConversionException;
 
 import be.nikiroo.utils.IOUtils;
 import be.nikiroo.utils.Image;
+import be.nikiroo.utils.StringUtils;
 import be.nikiroo.utils.streams.NextableInputStream;
 import be.nikiroo.utils.streams.NextableInputStreamStep;
-import be.nikiroo.utils.StringUtils;
 
 /**
  * Small class to help with serialisation.
@@ -63,8 +63,9 @@ public class SerialUtils {
 			@Override
 			protected void toStream(OutputStream out, Object value)
 					throws IOException {
-				// TODO: we use \n to separate, and b64 to un-\n -- but we could
-				// use \\n ?
+
+				// TODO: we use \n to separate, and b64 to un-\n
+				// -- but we could use \\n ?
 				String type = value.getClass().getCanonicalName();
 				type = type.substring(0, type.length() - 2); // remove the []
 
@@ -403,9 +404,9 @@ public class SerialUtils {
 		} else if (value.getClass().getSimpleName().endsWith("[]")) {
 			// Simple name does support [] suffix and do not return NULL for
 			// inner anonymous classes
-			return customTypes.get("[]").encode(out, value);
+			customTypes.get("[]").encode(out, value);
 		} else if (customTypes.containsKey(value.getClass().getCanonicalName())) {
-			return customTypes.get(value.getClass().getCanonicalName())//
+			customTypes.get(value.getClass().getCanonicalName())//
 					.encode(out, value);
 		} else if (value instanceof String) {
 			encodeString(out, (String) value);
@@ -604,6 +605,7 @@ public class SerialUtils {
 
 	// aa bb -> "aa\tbb"
 	static void encodeString(OutputStream out, String raw) throws IOException {
+		// TODO: not. efficient.
 		out.write('\"');
 		// TODO !! utf-8 required
 		for (char car : raw.toCharArray()) {

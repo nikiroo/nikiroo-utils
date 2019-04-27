@@ -7,6 +7,8 @@ import java.io.OutputStream;
 import be.nikiroo.utils.IOUtils;
 import be.nikiroo.utils.streams.NextableInputStream;
 import be.nikiroo.utils.streams.NextableInputStreamStep;
+import be.nikiroo.utils.streams.ReplaceInputStream;
+import be.nikiroo.utils.streams.ReplaceOutputStream;
 
 public abstract class CustomSerializer {
 
@@ -25,60 +27,67 @@ public abstract class CustomSerializer {
 	 * @param value
 	 *            the object to encode
 	 * 
-	 * @return FALSE if the value is not supported, TRUE if the operation was
-	 *         successful (if the value is supported by the operation was not
-	 *         successful, you will get an {@link IOException})
-	 * 
 	 * @throws IOException
 	 *             in case of I/O error
 	 */
-	public boolean encode(OutputStream out, Object value) throws IOException {
-		SerialUtils.write(out, "custom^");
-		SerialUtils.write(out, getType());
-		SerialUtils.write(out, "^");
-		// TODO: manage ENTER
-		toStream(out, value);
-
-		return true;
+	public void encode(OutputStream out, Object value) throws IOException {
+		ReplaceOutputStream replace = new ReplaceOutputStream(out, //
+				new String[] { "\\", "\n" }, //
+				new String[] { "\\\\", "\\n" });
+		try {
+			SerialUtils.write(replace, "custom^");
+			SerialUtils.write(replace, getType());
+			SerialUtils.write(replace, "^");
+			toStream(replace, value);
+		} finally {
+			replace.close(false);
+		}
 	}
 
 	public Object decode(InputStream in) throws IOException {
-		// TODO: manage ENTER
-		NextableInputStream stream = new NextableInputStream(in,
-				new NextableInputStreamStep('^'));
+		ReplaceInputStream replace = new ReplaceInputStream(in, //
+				new String[] { "\\\\", "\\n" }, //
+				new String[] { "\\", "\n" });
 
 		try {
-			if (!stream.next()) {
-				throw new IOException("Cannot find the first custom^ element");
-			}
+			NextableInputStream stream = new NextableInputStream(
+					replace.open(), new NextableInputStreamStep('^'));
+			try {
+				if (!stream.next()) {
+					throw new IOException(
+							"Cannot find the first custom^ element");
+				}
 
-			String custom = IOUtils.readSmallStream(stream);
-			if (!"custom".equals(custom)) {
-				throw new IOException(
-						"Cannot find the first custom^ element, it is: "
-								+ custom + "^");
-			}
+				String custom = IOUtils.readSmallStream(stream);
+				if (!"custom".equals(custom)) {
+					throw new IOException(
+							"Cannot find the first custom^ element, it is: "
+									+ custom + "^");
+				}
 
-			if (!stream.next()) {
-				throw new IOException("Cannot find the second custom^"
-						+ getType() + " element");
-			}
+				if (!stream.next()) {
+					throw new IOException("Cannot find the second custom^"
+							+ getType() + " element");
+				}
 
-			String type = IOUtils.readSmallStream(stream);
-			if (!getType().equals(type)) {
-				throw new IOException("Cannot find the second custom^"
-						+ getType() + " element, it is: custom^" + type + "^");
-			}
+				String type = IOUtils.readSmallStream(stream);
+				if (!getType().equals(type)) {
+					throw new IOException("Cannot find the second custom^"
+							+ getType() + " element, it is: custom^" + type
+							+ "^");
+				}
 
-			if (!stream.nextAll()) {
-				throw new IOException("Cannot find the third custom^"
-						+ getType() + "^value element");
-			}
+				if (!stream.nextAll()) {
+					throw new IOException("Cannot find the third custom^"
+							+ getType() + "^value element");
+				}
 
-			// TODO: manage ENTER
-			return fromStream(stream);
+				return fromStream(stream);
+			} finally {
+				stream.close();
+			}
 		} finally {
-			stream.close(false);
+			replace.close(false);
 		}
 	}
 
