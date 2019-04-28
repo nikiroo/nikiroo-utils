@@ -252,7 +252,7 @@ abstract class ConnectAction {
 	 * <p>
 	 * Will only flush the data if there is contentToSend.
 	 * 
-	 * @return the answer (which can be NULL)
+	 * @return the answer (which can be NULL if no more content)
 	 * 
 	 * @throws IOException
 	 *             in case of I/O error
@@ -275,11 +275,12 @@ abstract class ConnectAction {
 	}
 
 	/**
-	 * Read a possibly encrypted line.
+	 * Read a possibly encrypted line, or NULL if no more content.
 	 * 
 	 * @param in
 	 *            the stream to read from
-	 * @return the unencrypted line
+	 * 
+	 * @return the unencrypted line or NULL
 	 * 
 	 * 
 	 * @throws IOException
@@ -288,19 +289,17 @@ abstract class ConnectAction {
 	 *             in case of crypt error
 	 */
 	private String readLine(NextableInputStream in) throws IOException {
-		String line = null;
 		if (in.next()) {
-			line = IOUtils.readSmallStream(in);
-		}
-
-		if (line != null) {
+			String line = IOUtils.readSmallStream(in);
 			bytesReceived += line.length();
 			if (crypt != null) {
 				line = crypt.decrypt64s(line, false);
 			}
+
+			return line;
 		}
 
-		return line;
+		return null;
 	}
 
 	/**

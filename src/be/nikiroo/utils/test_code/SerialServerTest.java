@@ -19,7 +19,7 @@ class SerialServerTest extends TestLauncher {
 		for (String key : new String[] { null,
 				"some super secret encryption key" }) {
 			// TODO: re-add bridge
-			for (boolean bridge : new Boolean[] { false }) {
+			for (boolean bridge : new Boolean[] { false, true }) {
 				final String skey = (key != null ? "(encrypted)"
 						: "(plain text)");
 				final String sbridge = (bridge ? " with bridge" : "");
@@ -27,13 +27,13 @@ class SerialServerTest extends TestLauncher {
 				addSeries(new SerialServerTest(args, key, skey, bridge,
 						sbridge, "ServerString"));
 
-				// addSeries(new SerialServerTest(args, key, skey, bridge,
-				// sbridge, new Object() {
-				// @Override
-				// public String toString() {
-				// return "ServerObject";
-				// }
-				// }));
+				addSeries(new SerialServerTest(args, key, skey, bridge,
+						sbridge, new Object() {
+							@Override
+							public String toString() {
+								return "ServerObject";
+							}
+						}));
 			}
 		}
 	}
