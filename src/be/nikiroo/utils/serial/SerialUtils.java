@@ -174,7 +174,8 @@ public class SerialUtils {
 						in.close();
 					}
 				} finally {
-					encoded.close();
+					encoded.flush();
+					// Cannot close!
 				}
 			}
 
@@ -186,7 +187,9 @@ public class SerialUtils {
 			@Override
 			protected Object fromStream(InputStream in) throws IOException {
 				try {
-					return new Image(in);
+					// Cannot close it!
+					InputStream decoded = StringUtils.unbase64(in, false);
+					return new Image(decoded);
 				} catch (IOException e) {
 					throw new UnknownFormatConversionException(e.getMessage());
 				}
