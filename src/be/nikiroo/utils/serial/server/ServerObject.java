@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
-import be.nikiroo.utils.Version;
-
 /**
  * This class implements a simple server that can listen for connections and
  * send/receive objects.
@@ -68,12 +66,12 @@ abstract public class ServerObject extends Server {
 	protected ConnectActionServer createConnectActionServer(Socket s) {
 		return new ConnectActionServerObject(s, key) {
 			@Override
-			public void action(Version clientVersion) throws Exception {
+			public void action() throws Exception {
 				try {
 					for (Object data = rec(); true; data = rec()) {
 						Object rep = null;
 						try {
-							rep = onRequest(this, clientVersion, data);
+							rep = onRequest(this, data);
 							if (isClosing()) {
 								return;
 							}
@@ -101,8 +99,6 @@ abstract public class ServerObject extends Server {
 	 * 
 	 * @param action
 	 *            the client action
-	 * @param clientVersion
-	 *            the client version
 	 * @param data
 	 *            the data sent by the client (which can be NULL)
 	 * 
@@ -112,5 +108,5 @@ abstract public class ServerObject extends Server {
 	 *             in case of an exception, the error will only be logged
 	 */
 	abstract protected Object onRequest(ConnectActionServerObject action,
-			Version clientVersion, Object data) throws Exception;
+			Object data) throws Exception;
 }

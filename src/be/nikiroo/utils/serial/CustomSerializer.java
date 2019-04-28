@@ -34,6 +34,7 @@ public abstract class CustomSerializer {
 		ReplaceOutputStream replace = new ReplaceOutputStream(out, //
 				new String[] { "\\", "\n" }, //
 				new String[] { "\\\\", "\\n" });
+
 		try {
 			SerialUtils.write(replace, "custom^");
 			SerialUtils.write(replace, getType());

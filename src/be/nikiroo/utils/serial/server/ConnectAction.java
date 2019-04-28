@@ -1,18 +1,17 @@
 package be.nikiroo.utils.serial.server;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.Socket;
 
 import javax.net.ssl.SSLException;
 
 import be.nikiroo.utils.CryptUtils;
-import be.nikiroo.utils.Version;
+import be.nikiroo.utils.IOUtils;
 import be.nikiroo.utils.serial.Exporter;
 import be.nikiroo.utils.serial.Importer;
+import be.nikiroo.utils.streams.NextableInputStream;
+import be.nikiroo.utils.streams.NextableInputStreamStep;
 
 /**
  * Base class used for the client/server basic handling.
@@ -26,13 +25,11 @@ import be.nikiroo.utils.serial.Importer;
 abstract class ConnectAction {
 	private Socket s;
 	private boolean server;
-	private Version version;
-	private Version clientVersion;
 
 	private CryptUtils crypt;
 
 	private Object lock = new Object();
-	private InputStream in;
+	private NextableInputStream in;
 	private OutputStream out;
 	private boolean contentToSend;
 
@@ -43,27 +40,10 @@ abstract class ConnectAction {
 	 * Method that will be called when an action is performed on either the
 	 * client or server this {@link ConnectAction} represent.
 	 * 
-	 * @param version
-	 *            the counter part version
-	 * 
 	 * @throws Exception
 	 *             in case of I/O error
 	 */
-	abstract protected void action(Version version) throws Exception;
-
-	/**
-	 * Method called when we negotiate the version with the client.
-	 * <p>
-	 * Thus, it is only called on the server.
-	 * <p>
-	 * Will return the actual server version by default.
-	 * 
-	 * @param clientVersion
-	 *            the client version
-	 * 
-	 * @return the version to send to the client
-	 */
-	abstract protected Version negotiateVersion(Version clientVersion);
+	abstract protected void action() throws Exception;
 
 	/**
 	 * Handler called when an unexpected error occurs in the code.
@@ -85,33 +65,13 @@ abstract class ConnectAction {
 	 * @param key
 	 *            an optional key to encrypt all the communications (if NULL,
 	 *            everything will be sent in clear text)
-	 * @param version
-	 *            the version of this client-or-server
 	 */
-	protected ConnectAction(Socket s, boolean server, String key,
-			Version version) {
+	protected ConnectAction(Socket s, boolean server, String key) {
 		this.s = s;
 		this.server = server;
 		if (key != null) {
 			crypt = new CryptUtils(key);
 		}
-
-		if (version == null) {
-			this.version = new Version();
-		} else {
-			this.version = version;
-		}
-
-		clientVersion = new Version();
-	}
-
-	/**
-	 * The version of this client-or-server.
-	 * 
-	 * @return the version
-	 */
-	public Version getVersion() {
-		return version;
 	}
 
 	/**
@@ -137,41 +97,13 @@ abstract class ConnectAction {
 	 */
 	public void connect() {
 		try {
-			in = s.getInputStream();
+			in = new NextableInputStream(s.getInputStream(),
+					new NextableInputStreamStep('\b'));
+
 			try {
 				out = s.getOutputStream();
 				try {
-					if (server) {
-						String line;
-						try {
-							line = readLine(in);
-						} catch (SSLException e) {
-							out.write("Unauthorized\n".getBytes());
-							throw e;
-						}
-
-						if (line != null && line.startsWith("VERSION ")) {
-							// "VERSION client-version" (VERSION 1.0.0)
-							Version clientVersion = new Version(
-									line.substring("VERSION ".length()));
-							this.clientVersion = clientVersion;
-							Version v = negotiateVersion(clientVersion);
-							if (v == null) {
-								v = new Version();
-							}
-
-							sendString("VERSION " + v.toString());
-						}
-
-						action(clientVersion);
-					} else {
-						String v = sendString("VERSION " + version.toString());
-						if (v != null && v.startsWith("VERSION ")) {
-							v = v.substring("VERSION ".length());
-						}
-
-						action(new Version(v));
-					}
+					action();
 				} finally {
 					out.close();
 					out = null;
@@ -219,6 +151,7 @@ abstract class ConnectAction {
 		synchronized (lock) {
 
 			new Exporter(out).append(data);
+			out.write('\b');
 
 			if (server) {
 				out.flush();
@@ -269,8 +202,12 @@ abstract class ConnectAction {
 					out.flush();
 					contentToSend = false;
 				}
-				
-				return new Importer().read(in).getValue();
+
+				if (in.next()) {
+					return new Importer().read(in).getValue();
+				}
+
+				throw new NullPointerException();
 			}
 
 			return null;
@@ -350,11 +287,12 @@ abstract class ConnectAction {
 	 * @throws SSLException
 	 *             in case of crypt error
 	 */
-	private String readLine(InputStream in) throws IOException {
-		if (inReader == null) {
-			inReader = new BufferedReader(new InputStreamReader(in));
+	private String readLine(NextableInputStream in) throws IOException {
+		String line = null;
+		if (in.next()) {
+			line = IOUtils.readSmallStream(in);
 		}
-		String line = inReader.readLine();
+
 		if (line != null) {
 			bytesReceived += line.length();
 			if (crypt != null) {
@@ -364,8 +302,6 @@ abstract class ConnectAction {
 
 		return line;
 	}
-
-	private BufferedReader inReader;
 
 	/**
 	 * Write a line, possible encrypted.
@@ -389,7 +325,7 @@ abstract class ConnectAction {
 			out.write(b64.getBytes("UTF-8"));
 			bytesSent += b64.length();
 		}
-		out.write("\n".getBytes("UTF-8"));
+		out.write('\b');
 		bytesSent++;
 	}
 }

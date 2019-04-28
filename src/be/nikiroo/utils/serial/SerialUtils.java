@@ -70,11 +70,12 @@ public class SerialUtils {
 				type = type.substring(0, type.length() - 2); // remove the []
 
 				write(out, type);
-				write(out, "\r");
 				try {
 					for (int i = 0; true; i++) {
 						Object item = Array.get(value, i);
+
 						// encode it normally if direct value
+						write(out, "\r");
 						if (!SerialUtils.encode(out, item)) {
 							try {
 								// TODO: bad escaping?
@@ -87,7 +88,6 @@ public class SerialUtils {
 										.getMessage());
 							}
 						}
-						write(out, "\r");
 					}
 				} catch (ArrayIndexOutOfBoundsException e) {
 					// Done.
@@ -374,7 +374,6 @@ public class SerialUtils {
 										// setAccessible)
 			}
 		}
-		write(out, "\n}");
 	}
 
 	/**

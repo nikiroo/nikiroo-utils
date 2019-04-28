@@ -9,7 +9,6 @@ import java.net.UnknownHostException;
 
 import be.nikiroo.utils.StringUtils;
 import be.nikiroo.utils.TraceHandler;
-import be.nikiroo.utils.Version;
 import be.nikiroo.utils.serial.Importer;
 
 /**
@@ -128,23 +127,22 @@ public class ServerBridge extends Server {
 		// Bad impl, not up to date (should work, but not efficient)
 		return new ConnectActionServerString(s, key) {
 			@Override
-			public void action(final Version clientVersion) throws Exception {
-				onClientContact(clientVersion);
+			public void action() throws Exception {
+				onClientContact();
 				final ConnectActionServerString bridge = this;
 
 				try {
 					new ConnectActionClientString(forwardToHost, forwardToPort,
-							forwardToKey, clientVersion) {
+							forwardToKey) {
 						@Override
-						public void action(final Version serverVersion)
-								throws Exception {
-							onServerContact(serverVersion);
+						public void action() throws Exception {
+							onServerContact();
 
 							for (String fromClient = bridge.rec(); fromClient != null; fromClient = bridge
 									.rec()) {
-								onRec(clientVersion, fromClient);
+								onRec(fromClient);
 								String fromServer = send(fromClient);
-								onSend(serverVersion, fromServer);
+								onSend(fromServer);
 								bridge.send(fromServer);
 							}
 
@@ -166,48 +164,38 @@ public class ServerBridge extends Server {
 
 	/**
 	 * This is the method that is called each time a client contact us.
-	 * 
-	 * @param clientVersion
-	 *            the client version
 	 */
-	protected void onClientContact(Version clientVersion) {
-		getTraceHandler().trace(">>> CLIENT " + clientVersion);
+	protected void onClientContact() {
+		getTraceHandler().trace(">>> CLIENT ");
 	}
 
 	/**
 	 * This is the method that is called each time a client contact us.
-	 * 
-	 * @param serverVersion
-	 *            the server version
 	 */
-	protected void onServerContact(Version serverVersion) {
-		getTraceHandler().trace("<<< SERVER " + serverVersion);
+	protected void onServerContact() {
+		getTraceHandler().trace("<<< SERVER");
 		getTraceHandler().trace("");
 	}
 
 	/**
 	 * This is the method that is called each time a client contact us.
 	 * 
-	 * @param clientVersion
-	 *            the client version
 	 * @param data
 	 *            the data sent by the client
 	 */
-	protected void onRec(Version clientVersion, String data) {
-		trace(">>> CLIENT (" + clientVersion + ")", data);
+	protected void onRec(String data) {
+		trace(">>> CLIENT", data);
 	}
 
 	/**
 	 * This is the method that is called each time the forwarded server contact
 	 * us.
 	 * 
-	 * @param serverVersion
-	 *            the client version
 	 * @param data
 	 *            the data sent by the client
 	 */
-	protected void onSend(Version serverVersion, String data) {
-		trace("<<< SERVER (" + serverVersion + ")", data);
+	protected void onSend(String data) {
+		trace("<<< SERVER", data);
 	}
 
 	@Override

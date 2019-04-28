@@ -75,11 +75,18 @@ public class Importer {
 			if (in == null) {
 				throw new NullPointerException("InputStream is null");
 			}
-			if (stream.eof()) {
-				throw new NullPointerException("InputStream is empty");
-			}
 
+			boolean first = true;
 			while (stream.next()) {
+				if (stream.eof()) {
+					if (first) {
+						throw new NullPointerException(
+								"InputStream empty, normal termination");
+					}
+					return this;
+				}
+				first = false;
+
 				boolean zip = stream.startsWiths("ZIP:");
 				boolean b64 = stream.startsWiths("B64:");
 
@@ -142,6 +149,10 @@ public class Importer {
 		// TODO use the stream, Luke
 		String line = IOUtils.readSmallStream(in);
 
+		if (line.isEmpty()) {
+			return false;
+		}
+
 		if (line.equals("{")) { // START: new child if needed
 			if (link != null) {
 				child = new Importer(map);
@@ -160,7 +171,12 @@ public class Importer {
 			} else {
 				if (line.endsWith(":")) {
 					// construct
-					me = SerialUtils.createObject(type);
+					try {
+						me = SerialUtils.createObject(type);
+					} catch (NoSuchMethodException e) {
+						System.out.println("LINE: <" + line + ">");
+						throw e;
+					}
 				} else {
 					// direct value
 					int pos = line.indexOf(":");
