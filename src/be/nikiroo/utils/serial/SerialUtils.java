@@ -373,6 +373,8 @@ public class SerialUtils {
 				e.printStackTrace(); // should not happen (see
 										// setAccessible)
 			}
+
+			write(out, "\n}");
 		}
 	}
 
