@@ -78,6 +78,7 @@ abstract public class ServerObject extends Server {
 						} catch (Exception e) {
 							onError(e);
 						}
+
 						send(rep);
 					}
 				} catch (NullPointerException e) {

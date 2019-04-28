@@ -171,12 +171,7 @@ public class Importer {
 			} else {
 				if (line.endsWith(":")) {
 					// construct
-					try {
-						me = SerialUtils.createObject(type);
-					} catch (NoSuchMethodException e) {
-						System.out.println("LINE: <" + line + ">");
-						throw e;
-					}
+					me = SerialUtils.createObject(type);
 				} else {
 					// direct value
 					int pos = line.indexOf(":");

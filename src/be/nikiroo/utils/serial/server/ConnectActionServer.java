@@ -105,7 +105,7 @@ abstract class ConnectActionServer {
 	 * @return the amount of bytes sent
 	 */
 	public long getBytesSent() {
-		return action.getBytesSent();
+		return action.getBytesWritten();
 	}
 
 	/**

@@ -18,7 +18,6 @@ class SerialServerTest extends TestLauncher {
 
 		for (String key : new String[] { null,
 				"some super secret encryption key" }) {
-			// TODO: re-add bridge
 			for (boolean bridge : new Boolean[] { false, true }) {
 				final String skey = (key != null ? "(encrypted)"
 						: "(plain text)");

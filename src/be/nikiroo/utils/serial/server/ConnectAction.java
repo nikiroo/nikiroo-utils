@@ -1,6 +1,7 @@
 package be.nikiroo.utils.serial.server;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 
@@ -10,8 +11,11 @@ import be.nikiroo.utils.CryptUtils;
 import be.nikiroo.utils.IOUtils;
 import be.nikiroo.utils.serial.Exporter;
 import be.nikiroo.utils.serial.Importer;
+import be.nikiroo.utils.streams.BufferedOutputStream;
 import be.nikiroo.utils.streams.NextableInputStream;
 import be.nikiroo.utils.streams.NextableInputStreamStep;
+import be.nikiroo.utils.streams.ReplaceInputStream;
+import be.nikiroo.utils.streams.ReplaceOutputStream;
 
 /**
  * Base class used for the client/server basic handling.
@@ -30,11 +34,8 @@ abstract class ConnectAction {
 
 	private Object lock = new Object();
 	private NextableInputStream in;
-	private OutputStream out;
+	private BufferedOutputStream out;
 	private boolean contentToSend;
-
-	private long bytesReceived;
-	private long bytesSent;
 
 	/**
 	 * Method that will be called when an action is performed on either the
@@ -80,7 +81,7 @@ abstract class ConnectAction {
 	 * @return the amount of bytes received
 	 */
 	public long getBytesReceived() {
-		return bytesReceived;
+		return in.getBytesRead();
 	}
 
 	/**
@@ -88,8 +89,8 @@ abstract class ConnectAction {
 	 * 
 	 * @return the amount of bytes sent
 	 */
-	public long getBytesSent() {
-		return bytesSent;
+	public long getBytesWritten() {
+		return out.getBytesWritten();
 	}
 
 	/**
@@ -97,20 +98,20 @@ abstract class ConnectAction {
 	 */
 	public void connect() {
 		try {
+			// TODO: assure that \b is never used, make sure \n usage is OK
 			in = new NextableInputStream(s.getInputStream(),
 					new NextableInputStreamStep('\b'));
 
 			try {
-				out = s.getOutputStream();
+				out = new BufferedOutputStream(s.getOutputStream());
+
 				try {
 					action();
 				} finally {
 					out.close();
-					out = null;
 				}
 			} finally {
 				in.close();
-				in = null;
 			}
 		} catch (Exception e) {
 			onError(e);
@@ -148,25 +149,7 @@ abstract class ConnectAction {
 	 */
 	protected Object sendObject(Object data) throws IOException,
 			NoSuchFieldException, NoSuchMethodException, ClassNotFoundException {
-		synchronized (lock) {
-
-			new Exporter(out).append(data);
-			out.write('\b');
-
-			if (server) {
-				out.flush();
-				return null;
-			}
-
-			contentToSend = true;
-			try {
-				return recObject();
-			} catch (NullPointerException e) {
-				// We accept no data here
-			}
-
-			return null;
-		}
+		return send(out, data, false);
 	}
 
 	/**
@@ -196,22 +179,7 @@ abstract class ConnectAction {
 	protected Object recObject() throws IOException, NoSuchFieldException,
 			NoSuchMethodException, ClassNotFoundException,
 			java.lang.NullPointerException {
-		synchronized (lock) {
-			if (server || contentToSend) {
-				if (contentToSend) {
-					out.flush();
-					contentToSend = false;
-				}
-
-				if (in.next()) {
-					return new Importer().read(in).getValue();
-				}
-
-				throw new NullPointerException();
-			}
-
-			return null;
-		}
+		return rec(false);
 	}
 
 	/**
@@ -230,17 +198,20 @@ abstract class ConnectAction {
 	 *             in case of crypt error
 	 */
 	protected String sendString(String line) throws IOException {
-		synchronized (lock) {
-			writeLine(out, line);
-
-			if (server) {
-				out.flush();
-				return null;
-			}
-
-			contentToSend = true;
-			return recString();
+		try {
+			return (String) send(out, line, true);
+		} catch (NoSuchFieldException e) {
+			// Cannot happen
+			e.printStackTrace();
+		} catch (NoSuchMethodException e) {
+			// Cannot happen
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
+			// Cannot happen
+			e.printStackTrace();
 		}
+
+		return null;
 	}
 
 	/**
@@ -260,14 +231,96 @@ abstract class ConnectAction {
 	 *             in case of crypt error
 	 */
 	protected String recString() throws IOException {
-		synchronized (lock) {
-			if (server || contentToSend) {
-				if (contentToSend) {
-					out.flush();
-					contentToSend = false;
-				}
+		try {
+			return (String) rec(true);
+		} catch (NoSuchFieldException e) {
+			// Cannot happen
+			e.printStackTrace();
+		} catch (NoSuchMethodException e) {
+			// Cannot happen
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
+			// Cannot happen
+			e.printStackTrace();
+		} catch (NullPointerException e) {
+			// Should happen
+			e.printStackTrace();
+		}
 
-				return readLine(in);
+		return null;
+	}
+
+	/**
+	 * Serialise and send the given object to the counter part (and, only for
+	 * client, return the deserialised answer -- the server will always receive
+	 * NULL).
+	 * 
+	 * @param out
+	 *            the stream to write to
+	 * @param data
+	 *            the data to write
+	 * @param asString
+	 *            TRUE to write it as a String, FALSE to write it as an Object
+	 * 
+	 * @return the answer (which can be NULL if no answer, or NULL for an answer
+	 *         which is NULL) if this action is a client, always NULL if it is a
+	 *         server
+	 * 
+	 * @throws IOException
+	 *             in case of I/O error
+	 * @throws SSLException
+	 *             in case of crypt error
+	 * @throws IOException
+	 *             in case of I/O error
+	 * @throws NoSuchFieldException
+	 *             if the serialised data contains information about a field
+	 *             which does actually not exist in the class we know of
+	 * @throws NoSuchMethodException
+	 *             if a class described in the serialised data cannot be created
+	 *             because it is not compatible with this code
+	 * @throws ClassNotFoundException
+	 *             if a class described in the serialised data cannot be found
+	 */
+	private Object send(BufferedOutputStream out, Object data, boolean asString)
+			throws IOException, NoSuchFieldException, NoSuchMethodException,
+			ClassNotFoundException, java.lang.NullPointerException {
+
+		synchronized (lock) {
+			OutputStream sub;
+			if (crypt != null) {
+				sub = crypt.encrypt64(out.open(), false);
+			} else {
+				sub = out.open();
+			}
+
+			// TODO: could be possible to check for non-crypt and only
+			// do it for crypt
+			sub = new ReplaceOutputStream(sub, //
+					new String[] { "\\", "\b" }, //
+					new String[] { "\\\\", "\\b" });
+
+			try {
+				if (asString) {
+					sub.write(data.toString().getBytes("UTF-8"));
+				} else {
+					new Exporter(sub).append(data);
+				}
+			} finally {
+				sub.close();
+			}
+
+			out.write('\b');
+
+			if (server) {
+				out.flush();
+				return null;
+			}
+
+			contentToSend = true;
+			try {
+				return rec(asString);
+			} catch (NullPointerException e) {
+				// We accept no data here for Objects
 			}
 
 			return null;
@@ -275,56 +328,80 @@ abstract class ConnectAction {
 	}
 
 	/**
-	 * Read a possibly encrypted line, or NULL if no more content.
+	 * Reserved for the server: flush the data to the client and retrieve its
+	 * answer.
+	 * <p>
+	 * Also used internally for the client (only do something if there is
+	 * contentToSend).
+	 * <p>
+	 * Will only flush the data if there is contentToSend.
+	 * <p>
+	 * Note that the behaviour is slightly different for String and Object
+	 * reading regarding exceptions:
+	 * <ul>
+	 * <li>NULL means that the counter part has no more data to send</li>
+	 * <li>All the exceptions except {@link IOException} are there for Object
+	 * conversion</li>
+	 * </ul>
 	 * 
-	 * @param in
-	 *            the stream to read from
+	 * @param asString
+	 *            TRUE for String reading, FALSE for Object reading (which can
+	 *            still be a String)
 	 * 
-	 * @return the unencrypted line or NULL
-	 * 
+	 * @return the deserialised answer (which can actually be NULL)
 	 * 
 	 * @throws IOException
 	 *             in case of I/O error
-	 * @throws SSLException
-	 *             in case of crypt error
+	 * @throws NoSuchFieldException
+	 *             if the serialised data contains information about a field
+	 *             which does actually not exist in the class we know of
+	 * @throws NoSuchMethodException
+	 *             if a class described in the serialised data cannot be created
+	 *             because it is not compatible with this code
+	 * @throws ClassNotFoundException
+	 *             if a class described in the serialised data cannot be found
+	 * @throws java.lang.NullPointerException
+	 *             for Objects only: if the counter part has no data to send
 	 */
-	private String readLine(NextableInputStream in) throws IOException {
-		if (in.next()) {
-			String line = IOUtils.readSmallStream(in);
-			bytesReceived += line.length();
-			if (crypt != null) {
-				line = crypt.decrypt64s(line, false);
+	private Object rec(boolean asString) throws IOException,
+			NoSuchFieldException, NoSuchMethodException,
+			ClassNotFoundException, java.lang.NullPointerException {
+
+		synchronized (lock) {
+			if (server || contentToSend) {
+				if (contentToSend) {
+					out.flush();
+					contentToSend = false;
+				}
+
+				if (in.next()) {
+					// TODO: could be possible to check for non-crypt and only
+					// do it for crypt
+					InputStream read = new ReplaceInputStream(in.open(), //
+							new String[] { "\\\\", "\\b" }, //
+							new String[] { "\\", "\b" });
+
+					try {
+						if (crypt != null) {
+							read = crypt.decrypt64(read, false);
+						}
+
+						if (asString) {
+							return IOUtils.readSmallStream(read);
+						}
+
+						return new Importer().read(read).getValue();
+					} finally {
+						read.close();
+					}
+				}
+
+				if (!asString) {
+					throw new NullPointerException();
+				}
 			}
 
-			return line;
+			return null;
 		}
-
-		return null;
-	}
-
-	/**
-	 * Write a line, possible encrypted.
-	 * 
-	 * @param out
-	 *            the stream to write to
-	 * @param line
-	 *            the line to write
-	 * @throws IOException
-	 *             in case of I/O error
-	 * @throws SSLException
-	 *             in case of crypt error
-	 */
-	private void writeLine(OutputStream out, String line) throws IOException {
-		if (crypt == null) {
-			out.write(line.getBytes("UTF-8"));
-			bytesSent += line.length();
-		} else {
-			// TODO: how NOT to create so many big Strings?
-			String b64 = crypt.encrypt64(line, false);
-			out.write(b64.getBytes("UTF-8"));
-			bytesSent += b64.length();
-		}
-		out.write('\b');
-		bytesSent++;
 	}
 }
