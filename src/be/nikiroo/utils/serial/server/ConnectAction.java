@@ -104,7 +104,7 @@ abstract class ConnectAction {
 		this.s = s;
 		this.server = server;
 		if (key != null) {
-			crypt = new CryptUtils(key);
+			crypt = new CryptUtils(true, key);
 		}
 
 		if (version == null) {
@@ -170,6 +170,9 @@ abstract class ConnectAction {
 						version = negotiateVersion(new Version(
 								HELLO.substring("VERSION ".length())));
 						sendString("VERSION " + version);
+
+						byte[] keys = StringUtils.unbase64(recString());
+						// TODO sendString()
 					} else {
 						String HELLO = sendString("VERSION " + clientVersion);
 						if (HELLO == null || !HELLO.startsWith("VERSION ")) {

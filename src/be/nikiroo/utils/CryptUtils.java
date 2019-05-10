@@ -4,14 +4,20 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
-import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.KeyFactory;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Arrays;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
 import javax.crypto.CipherOutputStream;
 import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.SSLException;
@@ -37,47 +43,40 @@ import be.nikiroo.utils.streams.Base64OutputStream;
  * @author niki
  */
 public class CryptUtils {
+	// // any size
+	// static private final String AES_NAME = "AES/CFB128/NoPadding";
+
+	// // 16bit blocks
+	// static private final String AES_NAME = "AES/CBC/NoPadding";
+// static private final String RSA_NAME = "RSA/ECB/PKCS1Padding";
+	
 	static private final String AES_NAME = "AES/CFB128/NoPadding";
+
+	static private final String RSA_NAME = "RSA/CFB128/PKCS1Padding";
+
+	// AES/CBC/NoPadding
+	// AES/ECB/NoPadding
+	// RSA/ECB/PKCS1Padding (1024/2048)
 
 	private Cipher ecipher;
 	private Cipher dcipher;
-	private SecretKey key;
+	private boolean symmetric;
+
+	// Symmetric only
+	private Key key;
+
+	// Asymmetric only
+	private Key encKey;
+	private Key decKey;
 
 	/**
-	 * Small and lazy-easy way to initialize a 128 bits key with
-	 * {@link CryptUtils}.
-	 * <p>
-	 * <b>Some</b> part of the key will be used to generate a 128 bits key and
-	 * initialize the {@link CryptUtils}; even NULL will generate something.
-	 * <p>
-	 * <b>This is most probably not secure. Do not use if you actually care
-	 * about security.</b>
+	 * Use the static generate* methods instead.
 	 * 
-	 * @param key
-	 *            the {@link String} to use as a base for the key, can be NULL
+	 * @param symmetric
+	 *            TRUE for symmetric encryption, FALSE for asymmetric encryption
 	 */
-	public CryptUtils(String key) {
-		try {
-			init(key2key(key));
-		} catch (InvalidKeyException e) {
-			// We made sure that the key is correct, so nothing here
-			e.printStackTrace();
-		}
-	}
-
-	/**
-	 * Create a new instance of {@link CryptUtils} with the given 128 bytes key.
-	 * <p>
-	 * The key <b>must</b> be exactly 128 bytes long.
-	 * 
-	 * @param bytes32
-	 *            the 128 bits (32 bytes) of the key
-	 * 
-	 * @throws InvalidKeyException
-	 *             if the key is not an array of 128 bytes
-	 */
-	public CryptUtils(byte[] bytes32) throws InvalidKeyException {
-		init(bytes32);
+	protected CryptUtils(boolean symmetric) {
+		this.symmetric = symmetric;
 	}
 
 	/**
@@ -199,28 +198,6 @@ public class CryptUtils {
 	}
 
 	/**
-	 * This method required an array of 128 bytes.
-	 * 
-	 * @param bytes32
-	 *            the array, which <b>must</b> be of 128 bits (32 bytes)
-	 * 
-	 * @throws InvalidKeyException
-	 *             if the key is not an array of 128 bits (32 bytes)
-	 */
-	private void init(byte[] bytes32) throws InvalidKeyException {
-		if (bytes32 == null || bytes32.length != 32) {
-			throw new InvalidKeyException(
-					"The size of the key must be of 128 bits (32 bytes), it is: "
-							+ (bytes32 == null ? "null" : "" + bytes32.length)
-							+ " bytes");
-		}
-
-		key = new SecretKeySpec(bytes32, "AES");
-		ecipher = newCipher(Cipher.ENCRYPT_MODE);
-		dcipher = newCipher(Cipher.DECRYPT_MODE);
-	}
-
-	/**
 	 * Create a new {@link Cipher}of the given mode (see
 	 * {@link Cipher#ENCRYPT_MODE} and {@link Cipher#ENCRYPT_MODE}).
 	 * 
@@ -232,9 +209,22 @@ public class CryptUtils {
 	 */
 	private Cipher newCipher(int mode) {
 		try {
-			byte[] iv = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-			IvParameterSpec ivspec = new IvParameterSpec(iv);
-			Cipher cipher = Cipher.getInstance(AES_NAME);
+			Cipher cipher = Cipher.getInstance(symmetric ? AES_NAME : RSA_NAME);
+
+			Key key = null;
+			if (symmetric) {
+				key = this.key;
+			} else {
+				key = mode == Cipher.ENCRYPT_MODE ? encKey : decKey;
+			}
+
+			// IV only for sym
+			IvParameterSpec ivspec = null;
+			if (true || symmetric) {
+				byte[] iv = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+				ivspec = new IvParameterSpec(iv);
+			}
+
 			cipher.init(mode, key, ivspec);
 			return cipher;
 		} catch (Exception e) {
@@ -427,14 +417,142 @@ public class CryptUtils {
 	}
 
 	/**
-	 * This is probably <b>NOT</b> secure!
+	 * Small and lazy-easy way to initialize a key with {@link CryptUtils}.
+	 * <p>
+	 * <b>Some</b> part of the key will be used to generate an encryption key
+	 * for symmetric encryption and initialize the {@link CryptUtils}; even NULL
+	 * will generate something.
+	 * <p>
+	 * <b>This is most probably not secure. Do not use if you actually care
+	 * about security.</b>
 	 * 
-	 * @param input
-	 *            some {@link String} input
+	 * @param key
+	 *            the {@link String} to use as a base for the key, can be NULL
+	 *            (which will generate a key for NULL)
 	 * 
-	 * @return a 128 bits key computed from the given input
+	 * @return the new instance
 	 */
-	static private byte[] key2key(String input) {
-		return StringUtils.getMd5Hash("" + input).getBytes();
+	static public CryptUtils generateSymmetric(String key) {
+		return generateSymmetric(StringUtils.getMd5Hash("" + key).getBytes());
+	}
+
+	/**
+	 * Create a new instance of {@link CryptUtils} with the given keys.
+	 * <p>
+	 * The key <b>must</b> be exactly the right size.
+	 * 
+	 * @param bytes
+	 *            the array, which <b>must</b> be of 128 bits (32 bytes) for
+	 *            symmetric encryption
+	 * 
+	 * @return the new instance
+	 */
+	static public CryptUtils generateSymmetric(byte[] bytes) {
+		try {
+			CryptUtils me = new CryptUtils(true);
+
+			if (bytes == null || bytes.length != 32) {
+				throw new InvalidKeySpecException(
+						"The size of the key must be of 128 bits (32 bytes) for symmetric encryption, it is: "
+								+ (bytes == null ? "null" : "" + bytes.length)
+								+ " bytes");
+			}
+
+			me.key = new SecretKeySpec(bytes, "AES");
+			me.ecipher = me.newCipher(Cipher.ENCRYPT_MODE);
+			me.dcipher = me.newCipher(Cipher.DECRYPT_MODE);
+
+			return me;
+		} catch (InvalidKeySpecException e) {
+			// We made sure that the key is correct, so nothing here
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	/**
+	 * Create a new instance of {@link CryptUtils} with the given keys.
+	 * <p>
+	 * The key <b>must</b> be correctly encoded as (sa1, sa2, sb1, sb2, a, a,
+	 * a... b, b, b...) where :
+	 * <ul>
+	 * <li>a: is the decryption key</li>
+	 * <li>b: the encryption key</li>
+	 * <li>sa1, sa2: the two bytes specifying the size of a (size = sa1 * 100 +
+	 * sa2)</li>
+	 * <li>sb1, sb2: the two bytes specifying the size of b (size = sb1 * 100 +
+	 * sb2)</li>
+	 * </ul>
+	 * 
+	 * @param bytes
+	 *            the array, which <b>must</b> be correctly encoded
+	 * 
+	 * @throws InvalidKeySpecException
+	 *             if the key is badly encoded
+	 */
+	static public CryptUtils generateAsymmetric(byte[] bytes)
+			throws InvalidKeySpecException {
+		CryptUtils me = new CryptUtils(false);
+
+		if (bytes == null || bytes.length < 6) {
+			throw new InvalidKeySpecException("Invalid for asymmetric, it is: "
+					+ (bytes == null ? "null" : "" + bytes.length) + " bytes");
+		}
+
+		int sizeDec = 100 * bytes[0] + bytes[1];
+		int sizeEnc = 100 * bytes[2] + bytes[3];
+
+		if (bytes.length != sizeDec + sizeEnc + 4) {
+			throw new InvalidKeySpecException("Invalid for asymmetric, it is: "
+					+ bytes.length + " bytes, but is described as "
+					+ (sizeDec + sizeEnc + 4) + " bytes");
+		}
+
+		try {
+			KeyFactory kf = KeyFactory.getInstance("RSA");
+			me.decKey = kf.generatePublic(new X509EncodedKeySpec(Arrays
+					.copyOfRange(bytes, 4, 4 + sizeDec)));
+			me.encKey = kf
+					.generatePrivate(new java.security.spec.PKCS8EncodedKeySpec(
+							Arrays.copyOfRange(bytes, 4 + sizeDec, 4 + sizeDec
+									+ sizeEnc)));
+		} catch (NoSuchAlgorithmException e) {
+			// All conforming JVM implementations support RSA
+			e.printStackTrace();
+		}
+
+		me.ecipher = me.newCipher(Cipher.ENCRYPT_MODE);
+		me.dcipher = me.newCipher(Cipher.DECRYPT_MODE);
+
+		return me;
+	}
+
+	/**
+	 * Create a new instance of {@link CryptUtils} with a randomly generated key
+	 * pair.
+	 * 
+	 */
+	static public CryptUtils generateAsymmetric() {
+		try {
+			KeyPairGenerator gen = KeyPairGenerator.getInstance("RSA");
+			gen.initialize(1024);
+			KeyPair kp = gen.generateKeyPair();
+			byte[] pub = kp.getPublic().getEncoded();
+			byte[] priv = kp.getPrivate().getEncoded();
+
+			byte[] bytes = new byte[4 + pub.length + priv.length];
+			bytes[0] = (byte) (pub.length / 100);
+			bytes[1] = (byte) (pub.length % 100);
+			bytes[2] = (byte) (priv.length / 100);
+			bytes[3] = (byte) (priv.length % 100);
+			System.arraycopy(pub, 0, bytes, 4, pub.length);
+			System.arraycopy(priv, 0, bytes, 4 + pub.length, priv.length);
+
+			return generateAsymmetric(bytes);
+		} catch (Exception e) {
+			// Keys should always have this size
+			e.printStackTrace();
+			return null;
+		}
 	}
 }

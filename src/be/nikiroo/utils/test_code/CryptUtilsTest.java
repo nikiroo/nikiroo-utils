@@ -11,24 +11,31 @@ import be.nikiroo.utils.test.TestLauncher;
 
 class CryptUtilsTest extends TestLauncher {
 	private String key;
-	private CryptUtils crypt;
+	private CryptUtils symCrypt;
+	private CryptUtils asyCrypt;
 
 	public CryptUtilsTest(String[] args) {
 		super("CryptUtils test", args);
 
 		String longKey = "some long string with more than 128 bits (=32 bytes) of data";
 
-		addSeries(new CryptUtilsTest(args, "Manual input wuth NULL key", null,
-				1));
-		addSeries(new CryptUtilsTest(args, "Streams with NULL key", null, true));
+		for (boolean sym : new Boolean[] { true, false }) {
+			String prefix = sym ? "Symmetric: " : "Asymmetric: ";
+			addSeries(new CryptUtilsTest(args, sym, prefix
+					+ "Manual input wuth NULL key", null, 1));
+			addSeries(new CryptUtilsTest(args, sym, prefix
+					+ "Streams with NULL key", null, true));
 
-		addSeries(new CryptUtilsTest(args, "Manual input with emptykey", "", 1));
-		addSeries(new CryptUtilsTest(args, "Streams with empty key", "", true));
+			addSeries(new CryptUtilsTest(args, sym, prefix
+					+ "Manual input with emptykey", "", 1));
+			addSeries(new CryptUtilsTest(args, sym, prefix
+					+ "Streams with empty key", "", true));
 
-		addSeries(new CryptUtilsTest(args, "Manual input with long key",
-				longKey, 1));
-		addSeries(new CryptUtilsTest(args, "Streams with long key", longKey,
-				true));
+			addSeries(new CryptUtilsTest(args, sym, prefix
+					+ "Manual input with long key", longKey, 1));
+			addSeries(new CryptUtilsTest(args, sym, prefix
+					+ "Streams with long key", longKey, true));
+		}
 	}
 
 	@Override
@@ -41,20 +48,22 @@ class CryptUtilsTest extends TestLauncher {
 
 			@Override
 			public void setUp() throws Exception {
-				crypt = new CryptUtils(key);
+				symCrypt = CryptUtils.generateSymmetric(key);
+				asyCrypt = CryptUtils.generateAsymmetric();
 				test.setUp();
 			}
 
 			@Override
 			public void tearDown() throws Exception {
 				test.tearDown();
-				crypt = null;
+				symCrypt = null;
+				asyCrypt = null;
 			}
 		});
 	}
 
-	private CryptUtilsTest(String[] args, String title, String key,
-			@SuppressWarnings("unused") int dummy) {
+	private CryptUtilsTest(String[] args, final boolean sym, String title,
+			String key, @SuppressWarnings("unused") int dummy) {
 		super(title, args);
 		this.key = key;
 
@@ -63,7 +72,9 @@ class CryptUtilsTest extends TestLauncher {
 		addTest(new TestCase("Short") {
 			@Override
 			public void test() throws Exception {
+				CryptUtils crypt = sym ? symCrypt : asyCrypt;
 				String orig = "data";
+
 				byte[] encrypted = crypt.encrypt(orig);
 				String decrypted = crypt.decrypts(encrypted);
 
@@ -74,7 +85,9 @@ class CryptUtilsTest extends TestLauncher {
 		addTest(new TestCase("Short, base64") {
 			@Override
 			public void test() throws Exception {
+				CryptUtils crypt = sym ? symCrypt : asyCrypt;
 				String orig = "data";
+
 				String encrypted = crypt.encrypt64(orig);
 				String decrypted = crypt.decrypt64s(encrypted);
 
@@ -85,7 +98,9 @@ class CryptUtilsTest extends TestLauncher {
 		addTest(new TestCase("Empty") {
 			@Override
 			public void test() throws Exception {
+				CryptUtils crypt = sym ? symCrypt : asyCrypt;
 				String orig = "";
+
 				byte[] encrypted = crypt.encrypt(orig);
 				String decrypted = crypt.decrypts(encrypted);
 
@@ -96,7 +111,9 @@ class CryptUtilsTest extends TestLauncher {
 		addTest(new TestCase("Empty, base64") {
 			@Override
 			public void test() throws Exception {
+				CryptUtils crypt = sym ? symCrypt : asyCrypt;
 				String orig = "";
+
 				String encrypted = crypt.encrypt64(orig);
 				String decrypted = crypt.decrypt64s(encrypted);
 
@@ -107,7 +124,9 @@ class CryptUtilsTest extends TestLauncher {
 		addTest(new TestCase("Long") {
 			@Override
 			public void test() throws Exception {
+				CryptUtils crypt = sym ? symCrypt : asyCrypt;
 				String orig = longData;
+
 				byte[] encrypted = crypt.encrypt(orig);
 				String decrypted = crypt.decrypts(encrypted);
 
@@ -118,7 +137,9 @@ class CryptUtilsTest extends TestLauncher {
 		addTest(new TestCase("Long, base64") {
 			@Override
 			public void test() throws Exception {
+				CryptUtils crypt = sym ? symCrypt : asyCrypt;
 				String orig = longData;
+
 				String encrypted = crypt.encrypt64(orig);
 				String decrypted = crypt.decrypt64s(encrypted);
 
@@ -127,16 +148,18 @@ class CryptUtilsTest extends TestLauncher {
 		});
 	}
 
-	private CryptUtilsTest(String[] args, String title, String key,
-			@SuppressWarnings("unused") boolean dummy) {
+	private CryptUtilsTest(String[] args, final boolean sym, String title,
+			String key, @SuppressWarnings("unused") boolean dummy) {
 		super(title, args);
 		this.key = key;
 
 		addTest(new TestCase("Simple test") {
 			@Override
 			public void test() throws Exception {
+				CryptUtils crypt = sym ? symCrypt : asyCrypt;
 				InputStream in = new ByteArrayInputStream(new byte[] { 42, 127,
 						12 });
+
 				crypt.encrypt(in);
 				ByteArrayOutputStream out = new ByteArrayOutputStream();
 				IOUtils.write(in, out);
