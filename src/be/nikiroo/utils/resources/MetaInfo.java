@@ -187,93 +187,151 @@ public class MetaInfo<E extends Enum<E>> implements Iterable<MetaInfo<E>> {
 	/**
 	 * The value stored by this item, as a {@link String}.
 	 * 
+	 * @param item
+	 *            the item number to get for an array of values, or -1 to get
+	 *            the whole value (has no effect if {@link MetaInfo#isArray()}
+	 *            is FALSE)
 	 * @param useDefaultIfEmpty
 	 *            use the default value instead of NULL if the setting is not
 	 *            set
 	 * 
 	 * @return the value
 	 */
-	public String getString(boolean useDefaultIfEmpty) {
-		if (value == null && useDefaultIfEmpty) {
-			return getDefaultString();
+	public String getString(int item, boolean useDefaultIfEmpty) {
+		if (isArray() && item >= 0) {
+			List<String> values = BundleHelper.parseList(value);
+			if (values != null && item < values.size()) {
+				return values.get(item);
+			}
+
+			if (useDefaultIfEmpty) {
+				return getDefaultString(item);
+			}
+			
+			return null;
 		}
 
+		if (value == null && useDefaultIfEmpty) {
+			return getDefaultString(item);
+		}
+		
 		return value;
 	}
 
 	/**
 	 * The default value of this item, as a {@link String}.
 	 * 
+	 * @param item
+	 *            the item number to get for an array of values, or -1 to get
+	 *            the whole value (has no effect if {@link MetaInfo#isArray()}
+	 *            is FALSE)
+	 * 
 	 * @return the default value
 	 */
-	public String getDefaultString() {
+	public String getDefaultString(int item) {
+		if (isArray() && item >= 0) {
+			List<String> values = BundleHelper.parseList(meta.def());
+			if (values != null && item < values.size()) {
+				return values.get(item);
+			}
+			
+			return null;
+		}
+
 		return meta.def();
 	}
 
 	/**
 	 * The value stored by this item, as a {@link Boolean}.
 	 * 
+	 * @param item
+	 *            the item number to get for an array of values, or -1 to get
+	 *            the whole value (has no effect if {@link MetaInfo#isArray()}
+	 *            is FALSE)
 	 * @param useDefaultIfEmpty
 	 *            use the default value instead of NULL if the setting is not
 	 *            set
 	 * 
 	 * @return the value
 	 */
-	public Boolean getBoolean(boolean useDefaultIfEmpty) {
-		return BundleHelper.parseBoolean(getString(useDefaultIfEmpty));
+	public Boolean getBoolean(int item, boolean useDefaultIfEmpty) {
+		return BundleHelper.parseBoolean(getString(item, useDefaultIfEmpty));
 	}
 
 	/**
 	 * The default value of this item, as a {@link Boolean}.
 	 * 
+	 * @param item
+	 *            the item number to get for an array of values, or -1 to get
+	 *            the whole value (has no effect if {@link MetaInfo#isArray()}
+	 *            is FALSE)
+	 * 
 	 * @return the default value
 	 */
-	public Boolean getDefaultBoolean() {
-		return BundleHelper.parseBoolean(getDefaultString());
+	public Boolean getDefaultBoolean(int item) {
+		return BundleHelper.parseBoolean(getDefaultString(item));
 	}
 
 	/**
 	 * The value stored by this item, as a {@link Character}.
 	 * 
+	 * @param item
+	 *            the item number to get for an array of values, or -1 to get
+	 *            the whole value (has no effect if {@link MetaInfo#isArray()}
+	 *            is FALSE)
 	 * @param useDefaultIfEmpty
 	 *            use the default value instead of NULL if the setting is not
 	 *            set
 	 * 
 	 * @return the value
 	 */
-	public Character getCharacter(boolean useDefaultIfEmpty) {
-		return BundleHelper.parseCharacter(getString(useDefaultIfEmpty));
+	public Character getCharacter(int item, boolean useDefaultIfEmpty) {
+		return BundleHelper.parseCharacter(getString(item, useDefaultIfEmpty));
 	}
 
 	/**
 	 * The default value of this item, as a {@link Character}.
 	 * 
+	 * @param item
+	 *            the item number to get for an array of values, or -1 to get
+	 *            the whole value (has no effect if {@link MetaInfo#isArray()}
+	 *            is FALSE)
+	 * 
 	 * @return the default value
 	 */
-	public Character getDefaultCharacter() {
-		return BundleHelper.parseCharacter(getDefaultString());
+	public Character getDefaultCharacter(int item) {
+		return BundleHelper.parseCharacter(getDefaultString(item));
 	}
 
 	/**
 	 * The value stored by this item, as an {@link Integer}.
 	 * 
+	 * @param item
+	 *            the item number to get for an array of values, or -1 to get
+	 *            the whole value (has no effect if {@link MetaInfo#isArray()}
+	 *            is FALSE)
 	 * @param useDefaultIfEmpty
 	 *            use the default value instead of NULL if the setting is not
 	 *            set
 	 * 
 	 * @return the value
 	 */
-	public Integer getInteger(boolean useDefaultIfEmpty) {
-		return BundleHelper.parseInteger(getString(useDefaultIfEmpty));
+	public Integer getInteger(int item, boolean useDefaultIfEmpty) {
+		return BundleHelper.parseInteger(getString(item, useDefaultIfEmpty));
 	}
 
 	/**
 	 * The default value of this item, as an {@link Integer}.
 	 * 
+	 * @param item
+	 *            the item number to get for an array of values, or -1 to get
+	 *            the whole value (has no effect if {@link MetaInfo#isArray()}
+	 *            is FALSE)
+	 * 
 	 * @return the default value
 	 */
-	public Integer getDefaultInteger() {
-		return BundleHelper.parseInteger(getDefaultString());
+	public Integer getDefaultInteger(int item) {
+		return BundleHelper.parseInteger(getDefaultString(item));
 	}
 
 	/**
@@ -282,14 +340,18 @@ public class MetaInfo<E extends Enum<E>> implements Iterable<MetaInfo<E>> {
 	 * <p>
 	 * The returned colour value is an ARGB value.
 	 * 
+	 * @param item
+	 *            the item number to get for an array of values, or -1 to get
+	 *            the whole value (has no effect if {@link MetaInfo#isArray()}
+	 *            is FALSE)
 	 * @param useDefaultIfEmpty
 	 *            use the default value instead of NULL if the setting is not
 	 *            set
 	 * 
 	 * @return the value
 	 */
-	public Integer getColor(boolean useDefaultIfEmpty) {
-		return BundleHelper.parseColor(getString(useDefaultIfEmpty));
+	public Integer getColor(int item, boolean useDefaultIfEmpty) {
+		return BundleHelper.parseColor(getString(item, useDefaultIfEmpty));
 	}
 
 	/**
@@ -298,10 +360,15 @@ public class MetaInfo<E extends Enum<E>> implements Iterable<MetaInfo<E>> {
 	 * <p>
 	 * The returned colour value is an ARGB value.
 	 * 
+	 * @param item
+	 *            the item number to get for an array of values, or -1 to get
+	 *            the whole value (has no effect if {@link MetaInfo#isArray()}
+	 *            is FALSE)
+	 * 
 	 * @return the value
 	 */
-	public Integer getDefaultColor() {
-		return BundleHelper.parseColor(getDefaultString());
+	public Integer getDefaultColor(int item) {
+		return BundleHelper.parseColor(getDefaultString(item));
 	}
 
 	/**
@@ -310,14 +377,18 @@ public class MetaInfo<E extends Enum<E>> implements Iterable<MetaInfo<E>> {
 	 * The list of values is comma-separated and each value is surrounded by
 	 * double-quotes; backslashes and double-quotes are escaped by a backslash.
 	 * 
+	 * @param item
+	 *            the item number to get for an array of values, or -1 to get
+	 *            the whole value (has no effect if {@link MetaInfo#isArray()}
+	 *            is FALSE)
 	 * @param useDefaultIfEmpty
 	 *            use the default value instead of NULL if the setting is not
 	 *            set
 	 * 
 	 * @return the value
 	 */
-	public List<String> getList(boolean useDefaultIfEmpty) {
-		return BundleHelper.parseList(getString(useDefaultIfEmpty));
+	public List<String> getList(int item, boolean useDefaultIfEmpty) {
+		return BundleHelper.parseList(getString(item, useDefaultIfEmpty));
 	}
 
 	/**
@@ -326,50 +397,79 @@ public class MetaInfo<E extends Enum<E>> implements Iterable<MetaInfo<E>> {
 	 * The list of values is comma-separated and each value is surrounded by
 	 * double-quotes; backslashes and double-quotes are escaped by a backslash.
 	 * 
+	 * @param item
+	 *            the item number to get for an array of values, or -1 to get
+	 *            the whole value (has no effect if {@link MetaInfo#isArray()}
+	 *            is FALSE)
+	 * 
 	 * @return the value
 	 */
-	public List<String> getDefaultList() {
-		return BundleHelper.parseList(getDefaultString());
+	public List<String> getDefaultList(int item) {
+		return BundleHelper.parseList(getDefaultString(item));
 	}
 
 	/**
 	 * The value stored by this item, as a {@link String}.
 	 * 
+	 * @param item
+	 *            the item number to set for an array of values, or -1 to set
+	 *            the whole value (has no effect if {@link MetaInfo#isArray()}
+	 *            is FALSE)
 	 * @param value
 	 *            the new value
 	 */
-	public void setString(String value) {
-		this.value = value;
+	public void setString(int item, String value) {
+		if (isArray() && item >= 0) {
+			List<String> values = BundleHelper.parseList(this.value);
+			for (int i = values.size(); i <= item; i++) {
+				values.set(item, value);
+			}
+			this.value = BundleHelper.fromList(values);
+		} else {
+			this.value = value;
+		}
 	}
 
 	/**
 	 * The value stored by this item, as a {@link Boolean}.
 	 * 
+	 * @param item
+	 *            the item number to set for an array of values, or -1 to set
+	 *            the whole value (has no effect if {@link MetaInfo#isArray()}
+	 *            is FALSE)
 	 * @param value
 	 *            the new value
 	 */
-	public void setBoolean(boolean value) {
-		setString(BundleHelper.fromBoolean(value));
+	public void setBoolean(int item, boolean value) {
+		setString(item, BundleHelper.fromBoolean(value));
 	}
 
 	/**
 	 * The value stored by this item, as a {@link Character}.
 	 * 
+	 * @param item
+	 *            the item number to set for an array of values, or -1 to set
+	 *            the whole value (has no effect if {@link MetaInfo#isArray()}
+	 *            is FALSE)
 	 * @param value
 	 *            the new value
 	 */
-	public void setCharacter(char value) {
-		setString(BundleHelper.fromCharacter(value));
+	public void setCharacter(int item, char value) {
+		setString(item, BundleHelper.fromCharacter(value));
 	}
 
 	/**
 	 * The value stored by this item, as an {@link Integer}.
 	 * 
+	 * @param item
+	 *            the item number to set for an array of values, or -1 to set
+	 *            the whole value (has no effect if {@link MetaInfo#isArray()}
+	 *            is FALSE)
 	 * @param value
 	 *            the new value
 	 */
-	public void setInteger(int value) {
-		setString(BundleHelper.fromInteger(value));
+	public void setInteger(int item, int value) {
+		setString(item, BundleHelper.fromInteger(value));
 	}
 
 	/**
@@ -378,11 +478,15 @@ public class MetaInfo<E extends Enum<E>> implements Iterable<MetaInfo<E>> {
 	 * <p>
 	 * The returned colour value is an ARGB value.
 	 * 
+	 * @param item
+	 *            the item number to set for an array of values, or -1 to set
+	 *            the whole value (has no effect if {@link MetaInfo#isArray()}
+	 *            is FALSE)
 	 * @param value
 	 *            the value
 	 */
-	public void setColor(int value) {
-		setString(BundleHelper.fromColor(value));
+	public void setColor(int item, int value) {
+		setString(item, BundleHelper.fromColor(value));
 	}
 
 	/**
@@ -391,12 +495,16 @@ public class MetaInfo<E extends Enum<E>> implements Iterable<MetaInfo<E>> {
 	 * The list of values is comma-separated and each value is surrounded by
 	 * double-quotes; backslashes and double-quotes are escaped by a backslash.
 	 * 
+	 * @param item
+	 *            the item number to set for an array of values, or -1 to set
+	 *            the whole value (has no effect if {@link MetaInfo#isArray()}
+	 *            is FALSE)
 	 * @param value
 	 *            the {@link String} representation
 	 * 
 	 */
-	public void setList(List<String> value) {
-		setString(BundleHelper.fromList(value));
+	public void setList(int item, List<String> value) {
+		setString(item, BundleHelper.fromList(value));
 	}
 
 	/**
@@ -414,7 +522,6 @@ public class MetaInfo<E extends Enum<E>> implements Iterable<MetaInfo<E>> {
 			try {
 				listener.run();
 			} catch (Exception e) {
-				// TODO: error management?
 				e.printStackTrace();
 			}
 		}
@@ -440,7 +547,6 @@ public class MetaInfo<E extends Enum<E>> implements Iterable<MetaInfo<E>> {
 			try {
 				listener.run();
 			} catch (Exception e) {
-				// TODO: error management?
 				e.printStackTrace();
 			}
 		}

@@ -18,10 +18,15 @@ class BundleHelper {
 	 * 
 	 * @param str
 	 *            the input {@link String}
+	 * @param item
+	 *            the item number to use for an array of values, or -1 for
+	 *            non-arrays
 	 * 
 	 * @return the converted {@link Boolean} or NULL
 	 */
-	static public Boolean parseBoolean(String str) {
+	static public Boolean parseBoolean(String str, int item) {
+		str = getItem(str, item);
+
 		if (str != null && str.length() > 0) {
 			if (str.equalsIgnoreCase("true") || str.equalsIgnoreCase("on")
 					|| str.equalsIgnoreCase("yes"))
@@ -55,10 +60,15 @@ class BundleHelper {
 	 * 
 	 * @param str
 	 *            the input {@link String}
+	 * @param item
+	 *            the item number to use for an array of values, or -1 for
+	 *            non-arrays
 	 * 
 	 * @return the converted {@link Integer} or NULL
 	 */
-	static public Integer parseInteger(String str) {
+	static public Integer parseInteger(String str, int item) {
+		str = getItem(str, item);
+
 		try {
 			return Integer.parseInt(str);
 		} catch (Exception e) {
@@ -80,18 +90,6 @@ class BundleHelper {
 	}
 
 	/**
-	 * Return a {@link String} representation of the given {@link Integer}.
-	 * 
-	 * @param value
-	 *            the input value
-	 * 
-	 * @return the raw {@link String} value that correspond to it
-	 */
-	static public String fromBoolean(int value) {
-		return Integer.toString(value);
-	}
-
-	/**
 	 * Convert the given {@link String} into a {@link Character} if it
 	 * represents a {@link Character}, or NULL if it doesn't.
 	 * <p>
@@ -101,10 +99,15 @@ class BundleHelper {
 	 * 
 	 * @param str
 	 *            the input {@link String}
+	 * @param item
+	 *            the item number to use for an array of values, or -1 for
+	 *            non-arrays
 	 * 
 	 * @return the converted {@link Character} or NULL
 	 */
-	static public Character parseCharacter(String str) {
+	static public Character parseCharacter(String str, int item) {
+		str = getItem(str, item);
+
 		String s = str.trim();
 		if (s.length() == 1) {
 			return s.charAt(0);
@@ -133,10 +136,15 @@ class BundleHelper {
 	 * 
 	 * @param str
 	 *            the input {@link String}
+	 * @param item
+	 *            the item number to use for an array of values, or -1 for
+	 *            non-arrays
 	 * 
 	 * @return the converted colour as an {@link Integer} value or NULL
 	 */
-	static Integer parseColor(String str) {
+	static Integer parseColor(String str, int item) {
+		str = getItem(str, item);
+
 		Integer rep = null;
 
 		str = str.trim();
@@ -252,9 +260,17 @@ class BundleHelper {
 	 * 
 	 * @param str
 	 *            the input value
+	 * @param item
+	 *            the item number to use for an array of values, or -1 for
+	 *            non-arrays
+	 * 
 	 * @return the raw {@link String} value that correspond to it
 	 */
-	static public List<String> parseList(String str) {
+	static public List<String> parseList(String str, int item) {
+		if (item >= 0) {
+			str = getItem(str, item);
+		}
+
 		if (str == null) {
 			return null;
 		}
@@ -419,5 +435,29 @@ class BundleHelper {
 		}
 
 		return builder.toString();
+	}
+
+	/**
+	 * Retrieve the specific item in the given value, assuming it is an array.
+	 * 
+	 * @param value
+	 *            the value to look into
+	 * @param item
+	 *            the item number to get for an array of values, or -1 for
+	 *            non-arrays (in that case, simply return the value as-is)
+	 * 
+	 * @return the value as-is for non arrays, the item <tt>item</tt> if found,
+	 *         NULL if not
+	 */
+	static private String getItem(String value, int item) {
+		if (item >= 0) {
+			value = null;
+			List<String> values = parseList(value, -1);
+			if (values != null && item < values.size()) {
+				value = values.get(item);
+			}
+		}
+
+		return value;
 	}
 }

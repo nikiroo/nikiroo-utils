@@ -12,6 +12,8 @@ import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
@@ -68,6 +70,11 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 	/** The original value before current changes. */
 	private Object orig;
 
+	protected MetaInfo<E> info;
+
+	private Object field;
+	private List<Object> fields = new ArrayList<Object>();
+
 	/**
 	 * Create a new {@link ConfigItem} for the given {@link MetaInfo}.
 	 * 
@@ -80,6 +87,8 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 	 *            different horisontal position)
 	 */
 	public ConfigItem(MetaInfo<E> info, int nhgap) {
+		this(info);
+
 		this.setLayout(new BorderLayout());
 
 		// TODO: support arrays
@@ -121,6 +130,10 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 		}
 	}
 
+	protected ConfigItem(MetaInfo<E> info) {
+		this.info = info;
+	}
+
 	private void reload(Object value) {
 		// We consider "" and NULL to be equals
 		if ("".equals(value)) {
@@ -142,9 +155,69 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 		return !newValue.equals(orig);
 	}
 
+	protected void setField(int item, Object field) {
+		if (item < 0) {
+			this.field = field;
+			return;
+		}
+
+		for (int i = fields.size(); i <= item; i++) {
+			fields.add(null);
+		}
+
+		fields.set(item, field);
+	}
+
+	protected Object getField(int item) {
+		if (item < 0) {
+			return field;
+		}
+
+		if (item < fields.size()) {
+			return fields.get(item);
+		}
+
+		return null;
+	}
+
+	// item: 0-based or -1 for no items
+	protected void reload(int item) {
+		Object value = getFromInfo(item);
+		setToField(item, value);
+
+		// We consider "" and NULL to be equals
+		if (value == null) {
+			value = "";
+		}
+		orig = value;
+	}
+
+	// item: 0-based or -1 for no items
+	protected void save(int item) {
+		Object value = getFromField(item);
+
+		// We consider "" and NULL to be equals
+		if (orig.equals(value == null ? "" : value)) {
+			setToInfo(item, value);
+		}
+	}
+
+	protected Object getFromInfo(int item) {
+		return null;
+	}
+
+	protected void setToInfo(int item, Object value) {
+	}
+
+	protected Object getFromField(int item) {
+		return null;
+	}
+
+	protected void setToField(int item, Object value) {
+	}
+
 	private void addStringField(final MetaInfo<E> info, int nhgap) {
 		final JTextField field = new JTextField();
-		field.setToolTipText(info.getDescription());
 		String value = info.getString(false);
 		reload(value);
 		field.setText(value);
@@ -439,7 +512,7 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 	 * 
 	 * @return the label
 	 */
-	private JComponent label(final MetaInfo<E> info, int nhgap) {
+	protected JComponent label(final MetaInfo<E> info, int nhgap) {
 		final JLabel label = new JLabel(info.getName());
 
 		Dimension ps = label.getPreferredSize();
@@ -555,7 +628,7 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 		return new ImageIcon(img);
 	}
 
-	private void setPreferredSize(JComponent field) {
+	protected void setPreferredSize(JComponent field) {
 		int height = Math
 				.max(getMinimumHeight(), field.getMinimumSize().height);
 		setPreferredSize(new Dimension(200, height));

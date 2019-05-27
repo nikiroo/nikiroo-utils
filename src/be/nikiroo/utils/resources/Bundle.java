@@ -137,6 +137,26 @@ public class Bundle<E extends Enum<E>> {
 	 *         resource file)
 	 */
 	public String getString(E id, String def) {
+		return getString(id, def, -1);
+	}
+
+	/**
+	 * Return the value associated to the given id as a {@link String}.
+	 * <p>
+	 * If no value is associated, take the default one if any.
+	 * 
+	 * @param id
+	 *            the id of the value to get
+	 * @param def
+	 *            the default value when it is not present in the config file
+	 * @param item
+	 *            the item number to get for an array of values, or -1 for
+	 *            non-arrays
+	 * 
+	 * @return the associated value, or NULL if not found (not present in the
+	 *         resource file)
+	 */
+	public String getString(E id, String def, int item) {
 		String rep = getString(id.name(), null);
 		if (rep == null) {
 			try {
@@ -149,7 +169,16 @@ public class Bundle<E extends Enum<E>> {
 		}
 
 		if (rep == null) {
-			rep = def;
+			return def;
+		}
+
+		if (item >= 0) {
+			List<String> values = BundleHelper.parseList(rep,item);
+			if (values != null && item < values.size()) {
+				return values.get(item);
+			}
+
+			return null;
 		}
 
 		return rep;
@@ -192,7 +221,6 @@ public class Bundle<E extends Enum<E>> {
 			id = Enum.valueOf(type, key);
 			return getString(id);
 		} catch (IllegalArgumentException e) {
-
 		}
 
 		return null;
@@ -219,7 +247,6 @@ public class Bundle<E extends Enum<E>> {
 			id = Enum.valueOf(type, key);
 			setString(id, value);
 		} catch (IllegalArgumentException e) {
-
 		}
 	}
 
@@ -234,8 +261,7 @@ public class Bundle<E extends Enum<E>> {
 	 * @return the associated value
 	 */
 	public Boolean getBoolean(E id) {
-		String str = getString(id);
-		return BundleHelper.parseBoolean(str);
+		return BundleHelper.parseBoolean(getString(id));
 	}
 
 	/**
@@ -260,6 +286,35 @@ public class Bundle<E extends Enum<E>> {
 	}
 
 	/**
+	 * Return the value associated to the given id as a {@link Boolean}.
+	 * <p>
+	 * If no value is associated, take the default one if any.
+	 * 
+	 * @param id
+	 *            the id of the value to get
+	 * @param def
+	 *            the default value when it is not present in the config file or
+	 *            if it is not a boolean value
+	 *            @param item
+	 *            the item number to get for an array of values, or -1 for
+	 *            non-arrays
+	 * 
+	 * @return the associated value
+	 */
+	public Boolean getBoolean(E id, boolean def, int item) {
+		String str = getString(id);
+		if (str == null) {
+			return def;
+		}
+
+		if (item >= 0) {
+			str = BundleHelper.parseList(str).get(item);
+		}
+
+		return BundleHelper.parseBoolean(str);
+	}
+
+	/**
 	 * Set the value associated to the given id as a {@link Boolean}.
 	 * 
 	 * @param id
@@ -269,6 +324,24 @@ public class Bundle<E extends Enum<E>> {
 	 * 
 	 */
 	public void setBoolean(E id, boolean value) {
+		setString(id.name(), BundleHelper.fromBoolean(value));
+	}
+	
+	/**
+	 * Set the value associated to the given id as a {@link Boolean}.
+	 * 
+	 * @param id
+	 *            the id of the value to set
+	 * @param value
+	 *            the value
+	 * 
+	 */
+	public void setBoolean(E id, boolean value, int item) {
+		List<String> values = getList(id);
+		for(int i = values.size() ; i < item ; i++){
+			values.add(null);
+		}
+		
 		setString(id.name(), BundleHelper.fromBoolean(value));
 	}
 
