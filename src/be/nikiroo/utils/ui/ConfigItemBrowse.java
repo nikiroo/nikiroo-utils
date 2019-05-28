@@ -3,6 +3,8 @@ package be.nikiroo.utils.ui;
 import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
@@ -30,7 +32,7 @@ public class ConfigItemBrowse<E extends Enum<E>> extends ConfigItem<E> {
 	 *            TRUE for directory browsing, FALSE for file browsing
 	 */
 	public ConfigItemBrowse(MetaInfo<E> info, boolean dir) {
-		super(info);
+		super(info, false);
 		this.dir = dir;
 	}
 
@@ -58,19 +60,32 @@ public class ConfigItemBrowse<E extends Enum<E>> extends ConfigItem<E> {
 	protected void setToField(Object value, int item) {
 		JTextField field = fields.get(getField(item));
 		if (field != null) {
-			field.setText(value == null ? "" : ((File) value).getAbsolutePath());
+			field.setText(value == null ? "" : ((File) value).getPath());
 		}
 	}
 
 	@Override
 	protected void setToInfo(Object value, int item) {
-		info.setString(((File) value).getAbsolutePath(), item);
+		info.setString(((File) value).getPath(), item);
 	}
 
 	@Override
 	protected JComponent createField(final int item) {
 		final JPanel pane = new JPanel(new BorderLayout());
 		final JTextField field = new JTextField();
+		field.addKeyListener(new KeyAdapter() {
+			@Override
+			public void keyTyped(KeyEvent e) {
+				File file = null;
+				if (!field.getText().isEmpty()) {
+					file = new File(field.getText());
+				}
+
+				if (hasValueChanged(file)) {
+					setDirtyItem(item);
+				}
+			}
+		});
 
 		final JButton browseButton = new JButton("...");
 		browseButton.addActionListener(new ActionListener() {
@@ -84,6 +99,9 @@ public class ConfigItemBrowse<E extends Enum<E>> extends ConfigItem<E> {
 					File file = chooser.getSelectedFile();
 					if (file != null) {
 						setToField(file, item);
+						if (hasValueChanged(file)) {
+							setDirtyItem(item);
+						}
 					}
 				}
 			}

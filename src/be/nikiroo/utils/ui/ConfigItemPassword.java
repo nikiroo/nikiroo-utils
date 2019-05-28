@@ -15,7 +15,7 @@ public class ConfigItemPassword<E extends Enum<E>> extends ConfigItem<E> {
 	 *            the {@link MetaInfo}
 	 */
 	public ConfigItemPassword(MetaInfo<E> info) {
-		super(info);
+		super(info, true);
 	}
 
 	@Override

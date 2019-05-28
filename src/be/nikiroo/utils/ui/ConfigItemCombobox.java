@@ -19,7 +19,7 @@ public class ConfigItemCombobox<E extends Enum<E>> extends ConfigItem<E> {
 	 *            allows the user to type in another value not in the list
 	 */
 	public ConfigItemCombobox(MetaInfo<E> info, boolean editable) {
-		super(info);
+		super(info, true);
 		this.editable = editable;
 	}
 

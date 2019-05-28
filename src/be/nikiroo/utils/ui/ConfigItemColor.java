@@ -31,7 +31,7 @@ public class ConfigItemColor<E extends Enum<E>> extends ConfigItem<E> {
 	 *            the {@link MetaInfo}
 	 */
 	public ConfigItemColor(MetaInfo<E> info) {
-		super(info);
+		super(info, true);
 	}
 
 	@Override

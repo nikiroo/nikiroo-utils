@@ -15,7 +15,7 @@ public class ConfigItemInteger<E extends Enum<E>> extends ConfigItem<E> {
 	 *            the {@link MetaInfo}
 	 */
 	public ConfigItemInteger(MetaInfo<E> info) {
-		super(info);
+		super(info, true);
 	}
 
 	@Override

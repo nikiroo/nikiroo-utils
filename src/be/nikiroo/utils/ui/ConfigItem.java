@@ -56,6 +56,7 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 
 	/** The original value before current changes. */
 	private Object orig;
+	private List<Integer> dirtyBits;
 
 	protected MetaInfo<E> info;
 
@@ -74,7 +75,7 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 	 *            different horisontal position)
 	 */
 	public ConfigItem(MetaInfo<E> info, int nhgap) {
-		this(info);
+		this(info, true);
 
 		ConfigItem<E> configItem = null;
 		switch (info.getFormat()) {
@@ -127,9 +128,16 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 	 * 
 	 * @param info
 	 *            the info
+	 * @param autoDirtyHandling
+	 *            TRUE to automatically manage the setDirty/Save operations,
+	 *            FALSE if you want to do it yourself via
+	 *            {@link ConfigItem#setDirtyItem(int)}
 	 */
-	protected ConfigItem(MetaInfo<E> info) {
+	protected ConfigItem(MetaInfo<E> info, boolean autoDirtyHandling) {
 		this.info = info;
+		if (!autoDirtyHandling) {
+			dirtyBits = new ArrayList<Integer>();
+		}
 	}
 
 	/**
@@ -259,6 +267,40 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 	}
 
 	/**
+	 * Manually specify that the given item is "dirty" and thus should be saved
+	 * when asked.
+	 * <p>
+	 * Has no effect if the class is using automatic dirty handling (see
+	 * {@link ConfigItem#ConfigItem(MetaInfo, boolean)}).
+	 * 
+	 * @param item
+	 *            the item number to get for an array of values, or -1 to get
+	 *            the whole value (has no effect if {@link MetaInfo#isArray()}
+	 *            is FALSE)
+	 */
+	protected void setDirtyItem(int item) {
+		if (dirtyBits != null) {
+			dirtyBits.add(item);
+		}
+	}
+
+	/**
+	 * Check if the value changed since the last load/save into the linked
+	 * {@link MetaInfo}.
+	 * <p>
+	 * Note that we consider NULL and an Empty {@link String} to be equals.
+	 * 
+	 * @param value
+	 *            the value to test
+	 * 
+	 * @return TRUE if it has
+	 */
+	protected boolean hasValueChanged(Object value) {
+		// We consider "" and NULL to be equals
+		return !orig.equals(value == null ? "" : value);
+	}
+
+	/**
 	 * Reload the values to what they currently are in the {@link MetaInfo}.
 	 * 
 	 * @param item
@@ -288,8 +330,15 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 	protected void save(int item) {
 		Object value = getFromField(item);
 
-		// We consider "" and NULL to be equals
-		if (!orig.equals(value == null ? "" : value)) {
+		boolean dirty = false;
+		if (dirtyBits != null) {
+			dirty = dirtyBits.remove((Integer) item);
+		} else {
+			// We consider "" and NULL to be equals
+			dirty = hasValueChanged(value);
+		}
+
+		if (dirty) {
 			info.setDirty();
 			setToInfo(value, item);
 			orig = (value == null ? "" : value);

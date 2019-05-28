@@ -15,7 +15,7 @@ public class ConfigItemBoolean<E extends Enum<E>> extends ConfigItem<E> {
 	 *            the {@link MetaInfo}
 	 */
 	public ConfigItemBoolean(MetaInfo<E> info) {
-		super(info);
+		super(info, true);
 	}
 
 	@Override
