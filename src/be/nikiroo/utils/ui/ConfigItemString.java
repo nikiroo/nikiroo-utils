@@ -1,8 +1,5 @@
 package be.nikiroo.utils.ui;
 
-import java.awt.BorderLayout;
-
-import javax.swing.JComponent;
 import javax.swing.JTextField;
 
 import be.nikiroo.utils.resources.MetaInfo;
@@ -21,7 +18,7 @@ public class ConfigItemString<E extends Enum<E>> extends ConfigItem<E> {
 	}
 
 	@Override
-	protected Object getFrom(Object field) {
+	protected Object getFromField(int item) {
 		JTextField field = (JTextField) getField(item);
 		if (field != null) {
 			return field.getText();
@@ -36,41 +33,15 @@ public class ConfigItemString<E extends Enum<E>> extends ConfigItem<E> {
 	}
 
 	@Override
-	protected void setTo(int item, Object value) {
-
+	protected void setToField(Object value, int item) {
+		JTextField field = (JTextField) getField(item);
+		if (field != null) {
+			field.setText(value == null ? "" : value.toString());
+		}
 	}
 
 	@Override
-	protected void setToInfo(int item, Object value) {
-
-	}
-
-	// move back into ConfigItem
-	// item = 0-based for array, -1 for no array
-	protected void addField(final MetaInfo<E> info, final int item,
-			JComponent addTo, int nhgap) {
-		final JTextField field = new JTextField();
-
-		setField(item, field);
-
-		reload(item);
-
-		info.addReloadedListener(new Runnable() {
-			@Override
-			public void run() {
-				reload(item);
-			}
-		});
-		info.addSaveListener(new Runnable() {
-			@Override
-			public void run() {
-				save(item);
-			}
-		});
-
-		addTo.add(label(info, nhgap), BorderLayout.WEST);
-		addTo.add(field, BorderLayout.CENTER);
-
-		setPreferredSize(field);
+	protected void setToInfo(Object value, int item) {
+		info.setString((String) value, item);
 	}
 }

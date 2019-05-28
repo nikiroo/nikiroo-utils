@@ -5,36 +5,26 @@ import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.BoxLayout;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
-import javax.swing.JButton;
-import javax.swing.JCheckBox;
-import javax.swing.JColorChooser;
-import javax.swing.JComboBox;
 import javax.swing.JComponent;
-import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JPasswordField;
-import javax.swing.JSpinner;
 import javax.swing.JTextField;
 
 import be.nikiroo.utils.Image;
 import be.nikiroo.utils.StringUtils;
 import be.nikiroo.utils.StringUtils.Alignment;
 import be.nikiroo.utils.resources.Bundle;
-import be.nikiroo.utils.resources.Meta.Format;
 import be.nikiroo.utils.resources.MetaInfo;
 
 /**
@@ -89,44 +79,49 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 	public ConfigItem(MetaInfo<E> info, int nhgap) {
 		this(info);
 
-		this.setLayout(new BorderLayout());
-
-		// TODO: support arrays
-		Format fmt = info.getFormat();
-		if (info.isArray()) {
-			fmt = Format.STRING;
-		}
-
-		switch (fmt) {
+		ConfigItem<E> configItem = null;
+		switch (info.getFormat()) {
 		case BOOLEAN:
-			addBooleanField(info, nhgap);
-			break;
+			// addBooleanField(info, nhgap);
+			// break;
 		case COLOR:
-			addColorField(info, nhgap);
-			break;
+			// addColorField(info, nhgap);
+			// break;
 		case FILE:
-			addBrowseField(info, nhgap, false);
-			break;
+			// addBrowseField(info, nhgap, false);
+			// break;
 		case DIRECTORY:
-			addBrowseField(info, nhgap, true);
-			break;
+			// addBrowseField(info, nhgap, true);
+			// break;
 		case COMBO_LIST:
-			addComboboxField(info, nhgap, true);
-			break;
+			// addComboboxField(info, nhgap, true);
+			// break;
 		case FIXED_LIST:
-			addComboboxField(info, nhgap, false);
-			break;
+			// addComboboxField(info, nhgap, false);
+			// break;
 		case INT:
-			addIntField(info, nhgap);
-			break;
+			// addIntField(info, nhgap);
+			// break;
 		case PASSWORD:
-			addPasswordField(info, nhgap);
-			break;
+			// addPasswordField(info, nhgap);
+			// break;
 		case STRING:
 		case LOCALE: // TODO?
 		default:
-			addStringField(info, nhgap);
+			// addStringField(info, nhgap);
+			configItem = new ConfigItemString<E>(info);
 			break;
+		}
+
+		if (info.isArray()) {
+			this.setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+			int size = info.getListSize(false);
+			for (int i = 0; i < size; i++) {
+				configItem.addField(info, i, this, nhgap);
+			}
+		} else {
+			this.setLayout(new BorderLayout());
+			configItem.addField(info, -1, this, nhgap);
 		}
 	}
 
@@ -183,7 +178,7 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 	// item: 0-based or -1 for no items
 	protected void reload(int item) {
 		Object value = getFromInfo(item);
-		setToField(item, value);
+		setToField(value, item);
 
 		// We consider "" and NULL to be equals
 		if (value == null) {
@@ -198,7 +193,7 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 
 		// We consider "" and NULL to be equals
 		if (orig.equals(value == null ? "" : value)) {
-			setToInfo(item, value);
+			setToInfo(value, item);
 		}
 	}
 
@@ -206,298 +201,297 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 		return null;
 	}
 
-	protected void setToInfo(int item, Object value) {
+	protected void setToInfo(Object value, int item) {
 	}
 
 	protected Object getFromField(int item) {
 		return null;
 	}
 
-	protected void setToField(int item, Object value) {
+	protected void setToField(Object value, int item) {
 	}
 
-	private void addStringField(final MetaInfo<E> info, int nhgap) {
+	// item = 0-based for array, -1 for no array
+	protected void addField(final MetaInfo<E> info, final int item,
+			JComponent addTo, int nhgap) {
 		final JTextField field = new JTextField();
-		String value = info.getString(false);
-		reload(value);
-		field.setText(value);
+
+		setField(item, field);
+
+		reload(item);
 
 		info.addReloadedListener(new Runnable() {
 			@Override
 			public void run() {
-				String value = info.getString(false);
-				reload(value);
-				field.setText(value);
+				reload(item);
 			}
 		});
 		info.addSaveListener(new Runnable() {
 			@Override
 			public void run() {
-				String value = field.getText();
-				if (isChanged(value)) {
-					info.setString(value);
-				}
+				save(item);
 			}
 		});
 
-		this.add(label(info, nhgap), BorderLayout.WEST);
-		this.add(field, BorderLayout.CENTER);
+		addTo.add(label(info, nhgap), BorderLayout.WEST);
+		addTo.add(field, BorderLayout.CENTER);
 
 		setPreferredSize(field);
 	}
 
-	private void addBooleanField(final MetaInfo<E> info, int nhgap) {
-		final JCheckBox field = new JCheckBox();
-		field.setToolTipText(info.getDescription());
-		Boolean state = info.getBoolean(true);
-
-		// Should not happen!
-		if (state == null) {
-			System.err
-					.println("No default value given for BOOLEAN parameter \""
-							+ info.getName() + "\", we consider it is FALSE");
-			state = false;
-		}
-
-		reload(state);
-		field.setSelected(state);
-
-		info.addReloadedListener(new Runnable() {
-			@Override
-			public void run() {
-				Boolean state = info.getBoolean(true);
-				if (state == null) {
-					state = false;
-				}
-
-				reload(state);
-				field.setSelected(state);
-			}
-		});
-		info.addSaveListener(new Runnable() {
-			@Override
-			public void run() {
-				boolean state = field.isSelected();
-				if (isChanged(state)) {
-					info.setBoolean(state);
-				}
-			}
-		});
-
-		this.add(label(info, nhgap), BorderLayout.WEST);
-		this.add(field, BorderLayout.CENTER);
-
-		setPreferredSize(field);
-	}
-
-	private void addColorField(final MetaInfo<E> info, int nhgap) {
-		final JTextField field = new JTextField();
-		field.setToolTipText(info.getDescription());
-		String value = info.getString(false);
-		reload(value);
-		field.setText(value);
-
-		info.addReloadedListener(new Runnable() {
-			@Override
-			public void run() {
-				String value = info.getString(false);
-				reload(value);
-				field.setText(value);
-			}
-		});
-		info.addSaveListener(new Runnable() {
-			@Override
-			public void run() {
-				String value = field.getText();
-				if (isChanged(value)) {
-					info.setString(value);
-				}
-			}
-		});
-
-		this.add(label(info, nhgap), BorderLayout.WEST);
-		JPanel pane = new JPanel(new BorderLayout());
-
-		final JButton colorWheel = new JButton();
-		colorWheel.setIcon(getIcon(17, info.getColor(true)));
-		colorWheel.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				Integer icol = info.getColor(true);
-				if (icol == null) {
-					icol = new Color(255, 255, 255, 255).getRGB();
-				}
-				Color initialColor = new Color(icol, true);
-				Color newColor = JColorChooser.showDialog(ConfigItem.this,
-						info.getName(), initialColor);
-				if (newColor != null) {
-					info.setColor(newColor.getRGB());
-					field.setText(info.getString(false));
-					colorWheel.setIcon(getIcon(17, info.getColor(true)));
-				}
-			}
-		});
-		pane.add(colorWheel, BorderLayout.WEST);
-		pane.add(field, BorderLayout.CENTER);
-		this.add(pane, BorderLayout.CENTER);
-
-		setPreferredSize(pane);
-	}
-
-	private void addBrowseField(final MetaInfo<E> info, int nhgap,
-			final boolean dir) {
-		final JTextField field = new JTextField();
-		field.setToolTipText(info.getDescription());
-		String value = info.getString(false);
-		reload(value);
-		field.setText(value);
-
-		info.addReloadedListener(new Runnable() {
-			@Override
-			public void run() {
-				String value = info.getString(false);
-				reload(value);
-				field.setText(value);
-			}
-		});
-		info.addSaveListener(new Runnable() {
-			@Override
-			public void run() {
-				String value = field.getText();
-				if (isChanged(value)) {
-					info.setString(value);
-				}
-			}
-		});
-
-		JButton browseButton = new JButton("...");
-		browseButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				JFileChooser chooser = new JFileChooser();
-				chooser.setCurrentDirectory(null);
-				chooser.setFileSelectionMode(dir ? JFileChooser.DIRECTORIES_ONLY
-						: JFileChooser.FILES_ONLY);
-				if (chooser.showOpenDialog(ConfigItem.this) == JFileChooser.APPROVE_OPTION) {
-					File file = chooser.getSelectedFile();
-					if (file != null) {
-						String value = file.getAbsolutePath();
-						if (isChanged(value)) {
-							info.setString(value);
-						}
-						field.setText(value);
-					}
-				}
-			}
-		});
-
-		JPanel pane = new JPanel(new BorderLayout());
-		this.add(label(info, nhgap), BorderLayout.WEST);
-		pane.add(browseButton, BorderLayout.WEST);
-		pane.add(field, BorderLayout.CENTER);
-		this.add(pane, BorderLayout.CENTER);
-
-		setPreferredSize(pane);
-	}
-
-	private void addComboboxField(final MetaInfo<E> info, int nhgap,
-			boolean editable) {
-		// rawtypes for Java 1.6 (and 1.7 ?) support
-		@SuppressWarnings({ "rawtypes", "unchecked" })
-		final JComboBox field = new JComboBox(info.getAllowedValues());
-		field.setEditable(editable);
-		String value = info.getString(false);
-		reload(value);
-		field.setSelectedItem(value);
-
-		info.addReloadedListener(new Runnable() {
-			@Override
-			public void run() {
-				String value = info.getString(false);
-				reload(value);
-				field.setSelectedItem(value);
-			}
-		});
-		info.addSaveListener(new Runnable() {
-			@Override
-			public void run() {
-				Object item = field.getSelectedItem();
-				String value = item == null ? null : item.toString();
-				if (isChanged(value)) {
-					info.setString(value);
-				}
-			}
-		});
-
-		this.add(label(info, nhgap), BorderLayout.WEST);
-		this.add(field, BorderLayout.CENTER);
-
-		setPreferredSize(field);
-	}
-
-	private void addPasswordField(final MetaInfo<E> info, int nhgap) {
-		final JPasswordField field = new JPasswordField();
-		field.setToolTipText(info.getDescription());
-		String value = info.getString(false);
-		reload(value);
-		field.setText(value);
-
-		info.addReloadedListener(new Runnable() {
-			@Override
-			public void run() {
-				String value = info.getString(false);
-				reload(value);
-				field.setText(value);
-			}
-		});
-		info.addSaveListener(new Runnable() {
-			@Override
-			public void run() {
-				String value = new String(field.getPassword());
-				if (isChanged(value)) {
-					info.setString(value);
-				}
-			}
-		});
-
-		this.add(label(info, nhgap), BorderLayout.WEST);
-		this.add(field, BorderLayout.CENTER);
-
-		setPreferredSize(field);
-	}
-
-	private void addIntField(final MetaInfo<E> info, int nhgap) {
-		final JSpinner field = new JSpinner();
-		field.setToolTipText(info.getDescription());
-		int value = info.getInteger(true) == null ? 0 : info.getInteger(true);
-		reload(value);
-		field.setValue(value);
-
-		info.addReloadedListener(new Runnable() {
-			@Override
-			public void run() {
-				int value = info.getInteger(true) == null ? 0 : info
-						.getInteger(true);
-				reload(value);
-				field.setValue(value);
-			}
-		});
-		info.addSaveListener(new Runnable() {
-			@Override
-			public void run() {
-				int value = field.getValue() == null ? 0 : (Integer) field
-						.getValue();
-				if (isChanged(value)) {
-					info.setInteger(value);
-				}
-			}
-		});
-
-		this.add(label(info, nhgap), BorderLayout.WEST);
-		this.add(field, BorderLayout.CENTER);
-
-		setPreferredSize(field);
-	}
+	// private void addBooleanField(final MetaInfo<E> info, int nhgap) {
+	// final JCheckBox field = new JCheckBox();
+	// field.setToolTipText(info.getDescription());
+	// Boolean state = info.getBoolean(true);
+	//
+	// // Should not happen!
+	// if (state == null) {
+	// System.err
+	// .println("No default value given for BOOLEAN parameter \""
+	// + info.getName() + "\", we consider it is FALSE");
+	// state = false;
+	// }
+	//
+	// reload(state);
+	// field.setSelected(state);
+	//
+	// info.addReloadedListener(new Runnable() {
+	// @Override
+	// public void run() {
+	// Boolean state = info.getBoolean(true);
+	// if (state == null) {
+	// state = false;
+	// }
+	//
+	// reload(state);
+	// field.setSelected(state);
+	// }
+	// });
+	// info.addSaveListener(new Runnable() {
+	// @Override
+	// public void run() {
+	// boolean state = field.isSelected();
+	// if (isChanged(state)) {
+	// info.setBoolean(state);
+	// }
+	// }
+	// });
+	//
+	// this.add(label(info, nhgap), BorderLayout.WEST);
+	// this.add(field, BorderLayout.CENTER);
+	//
+	// setPreferredSize(field);
+	// }
+	//
+	// private void addColorField(final MetaInfo<E> info, int nhgap) {
+	// final JTextField field = new JTextField();
+	// field.setToolTipText(info.getDescription());
+	// String value = info.getString(false);
+	// reload(value);
+	// field.setText(value);
+	//
+	// info.addReloadedListener(new Runnable() {
+	// @Override
+	// public void run() {
+	// String value = info.getString(false);
+	// reload(value);
+	// field.setText(value);
+	// }
+	// });
+	// info.addSaveListener(new Runnable() {
+	// @Override
+	// public void run() {
+	// String value = field.getText();
+	// if (isChanged(value)) {
+	// info.setString(value);
+	// }
+	// }
+	// });
+	//
+	// this.add(label(info, nhgap), BorderLayout.WEST);
+	// JPanel pane = new JPanel(new BorderLayout());
+	//
+	// final JButton colorWheel = new JButton();
+	// colorWheel.setIcon(getIcon(17, info.getColor(true)));
+	// colorWheel.addActionListener(new ActionListener() {
+	// @Override
+	// public void actionPerformed(ActionEvent e) {
+	// Integer icol = info.getColor(true);
+	// if (icol == null) {
+	// icol = new Color(255, 255, 255, 255).getRGB();
+	// }
+	// Color initialColor = new Color(icol, true);
+	// Color newColor = JColorChooser.showDialog(ConfigItem.this,
+	// info.getName(), initialColor);
+	// if (newColor != null) {
+	// info.setColor(newColor.getRGB());
+	// field.setText(info.getString(false));
+	// colorWheel.setIcon(getIcon(17, info.getColor(true)));
+	// }
+	// }
+	// });
+	// pane.add(colorWheel, BorderLayout.WEST);
+	// pane.add(field, BorderLayout.CENTER);
+	// this.add(pane, BorderLayout.CENTER);
+	//
+	// setPreferredSize(pane);
+	// }
+	//
+	// private void addBrowseField(final MetaInfo<E> info, int nhgap,
+	// final boolean dir) {
+	// final JTextField field = new JTextField();
+	// field.setToolTipText(info.getDescription());
+	// String value = info.getString(false);
+	// reload(value);
+	// field.setText(value);
+	//
+	// info.addReloadedListener(new Runnable() {
+	// @Override
+	// public void run() {
+	// String value = info.getString(false);
+	// reload(value);
+	// field.setText(value);
+	// }
+	// });
+	// info.addSaveListener(new Runnable() {
+	// @Override
+	// public void run() {
+	// String value = field.getText();
+	// if (isChanged(value)) {
+	// info.setString(value);
+	// }
+	// }
+	// });
+	//
+	// JButton browseButton = new JButton("...");
+	// browseButton.addActionListener(new ActionListener() {
+	// @Override
+	// public void actionPerformed(ActionEvent e) {
+	// JFileChooser chooser = new JFileChooser();
+	// chooser.setCurrentDirectory(null);
+	// chooser.setFileSelectionMode(dir ? JFileChooser.DIRECTORIES_ONLY
+	// : JFileChooser.FILES_ONLY);
+	// if (chooser.showOpenDialog(ConfigItem.this) ==
+	// JFileChooser.APPROVE_OPTION) {
+	// File file = chooser.getSelectedFile();
+	// if (file != null) {
+	// String value = file.getAbsolutePath();
+	// if (isChanged(value)) {
+	// info.setString(value);
+	// }
+	// field.setText(value);
+	// }
+	// }
+	// }
+	// });
+	//
+	// JPanel pane = new JPanel(new BorderLayout());
+	// this.add(label(info, nhgap), BorderLayout.WEST);
+	// pane.add(browseButton, BorderLayout.WEST);
+	// pane.add(field, BorderLayout.CENTER);
+	// this.add(pane, BorderLayout.CENTER);
+	//
+	// setPreferredSize(pane);
+	// }
+	//
+	// private void addComboboxField(final MetaInfo<E> info, int nhgap,
+	// boolean editable) {
+	// // rawtypes for Java 1.6 (and 1.7 ?) support
+	// @SuppressWarnings({ "rawtypes", "unchecked" })
+	// final JComboBox field = new JComboBox(info.getAllowedValues());
+	// field.setEditable(editable);
+	// String value = info.getString(false);
+	// reload(value);
+	// field.setSelectedItem(value);
+	//
+	// info.addReloadedListener(new Runnable() {
+	// @Override
+	// public void run() {
+	// String value = info.getString(false);
+	// reload(value);
+	// field.setSelectedItem(value);
+	// }
+	// });
+	// info.addSaveListener(new Runnable() {
+	// @Override
+	// public void run() {
+	// Object item = field.getSelectedItem();
+	// String value = item == null ? null : item.toString();
+	// if (isChanged(value)) {
+	// info.setString(value);
+	// }
+	// }
+	// });
+	//
+	// this.add(label(info, nhgap), BorderLayout.WEST);
+	// this.add(field, BorderLayout.CENTER);
+	//
+	// setPreferredSize(field);
+	// }
+	//
+	// private void addPasswordField(final MetaInfo<E> info, int nhgap) {
+	// final JPasswordField field = new JPasswordField();
+	// field.setToolTipText(info.getDescription());
+	// String value = info.getString(false);
+	// reload(value);
+	// field.setText(value);
+	//
+	// info.addReloadedListener(new Runnable() {
+	// @Override
+	// public void run() {
+	// String value = info.getString(false);
+	// reload(value);
+	// field.setText(value);
+	// }
+	// });
+	// info.addSaveListener(new Runnable() {
+	// @Override
+	// public void run() {
+	// String value = new String(field.getPassword());
+	// if (isChanged(value)) {
+	// info.setString(value);
+	// }
+	// }
+	// });
+	//
+	// this.add(label(info, nhgap), BorderLayout.WEST);
+	// this.add(field, BorderLayout.CENTER);
+	//
+	// setPreferredSize(field);
+	// }
+	//
+	// private void addIntField(final MetaInfo<E> info, int nhgap) {
+	// final JSpinner field = new JSpinner();
+	// field.setToolTipText(info.getDescription());
+	// int value = info.getInteger(true) == null ? 0 : info.getInteger(true);
+	// reload(value);
+	// field.setValue(value);
+	//
+	// info.addReloadedListener(new Runnable() {
+	// @Override
+	// public void run() {
+	// int value = info.getInteger(true) == null ? 0 : info
+	// .getInteger(true);
+	// reload(value);
+	// field.setValue(value);
+	// }
+	// });
+	// info.addSaveListener(new Runnable() {
+	// @Override
+	// public void run() {
+	// int value = field.getValue() == null ? 0 : (Integer) field
+	// .getValue();
+	// if (isChanged(value)) {
+	// info.setInteger(value);
+	// }
+	// }
+	// });
+	//
+	// this.add(label(info, nhgap), BorderLayout.WEST);
+	// this.add(field, BorderLayout.CENTER);
+	//
+	// setPreferredSize(field);
+	// }
 
 	/**
 	 * Create a label which width is constrained in lock steps.

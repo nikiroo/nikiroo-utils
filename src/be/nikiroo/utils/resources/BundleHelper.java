@@ -253,6 +253,24 @@ class BundleHelper {
 	}
 
 	/**
+	 * The size of this raw list.
+	 * 
+	 * @param raw
+	 *            the raw list
+	 * 
+	 * @return its size if it is a list, -1 if not
+	 */
+	static public int getListSize(String raw) {
+		// TODO: find better option?
+		List<String> list = parseList(raw, -1);
+		if (list == null) {
+			return -1;
+		}
+
+		return list.size();
+	}
+
+	/**
 	 * Return a {@link String} representation of the given list of values.
 	 * <p>
 	 * The list of values is comma-separated and each value is surrounded by
