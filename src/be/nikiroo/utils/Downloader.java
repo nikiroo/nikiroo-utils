@@ -1,5 +1,6 @@
 package be.nikiroo.utils;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
@@ -58,11 +59,10 @@ public class Downloader {
 	public Downloader(String UA, Cache cache) {
 		this.UA = UA;
 
-		cookies = new CookieManager();
-		cookies.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
+		cookies = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
 		CookieHandler.setDefault(cookies);
 
-		this.cache = cache;
+		setCache(cache);
 	}
 
 	/**
@@ -266,9 +266,9 @@ public class Downloader {
 			params = postParams;
 		}
 
+		StringBuilder requestData = null;
 		if ((params != null || oauth != null)
 				&& conn instanceof HttpURLConnection) {
-			StringBuilder requestData = null;
 			if (params != null) {
 				requestData = new StringBuilder();
 				for (Map.Entry<String, String> param : params.entrySet()) {
@@ -281,15 +281,14 @@ public class Downloader {
 							String.valueOf(param.getValue()), "UTF-8"));
 				}
 
-				conn.setDoOutput(true);
-
 				if (getParams == null && postParams != null) {
 					((HttpURLConnection) conn).setRequestMethod("POST");
 				}
 
 				conn.setRequestProperty("Content-Type",
 						"application/x-www-form-urlencoded");
-				conn.setRequestProperty("charset", "utf-8");
+				conn.setRequestProperty("Content-Length",
+						Integer.toString(requestData.length()));
 			}
 
 			if (oauth != null) {
@@ -297,22 +296,28 @@ public class Downloader {
 			}
 
 			if (requestData != null) {
-				OutputStreamWriter writer = null;
+				conn.setDoOutput(true);
+				OutputStreamWriter writer = new OutputStreamWriter(
+						conn.getOutputStream());
 				try {
-					writer = new OutputStreamWriter(conn.getOutputStream());
 					writer.write(requestData.toString());
 					writer.flush();
 				} finally {
-					if (writer != null) {
-						writer.close();
-					}
+					writer.close();
 				}
 			}
+		}
+
+		// Manual redirection, much better for POST data
+		if (conn instanceof HttpURLConnection) {
+			((HttpURLConnection) conn).setInstanceFollowRedirects(false);
 		}
 
 		conn.connect();
 
 		// Check if redirect
+		// BEWARE! POST data cannot be redirected (some webservers complain) for
+		// HTTP codes 302 and 303
 		if (conn instanceof HttpURLConnection) {
 			int repCode = 0;
 			try {
@@ -324,32 +329,48 @@ public class Downloader {
 			if (repCode / 100 == 3) {
 				String newUrl = conn.getHeaderField("Location");
 				return open(new URL(newUrl), originalUrl, currentReferer,
-						cookiesValues, postParams, getParams, oauth, stable);
+						cookiesValues, //
+						(repCode == 302 || repCode == 303) ? null : postParams, //
+						getParams, oauth, stable);
 			}
 		}
 
-		InputStream in = conn.getInputStream();
-		if ("gzip".equals(conn.getContentEncoding())) {
-			in = new GZIPInputStream(in);
-		}
+		try {
+			InputStream in = conn.getInputStream();
+			if ("gzip".equals(conn.getContentEncoding())) {
+				in = new GZIPInputStream(in);
+			}
 
-		if (in != null && cache != null) {
-			tracer.trace("Save to cache: " + originalUrl);
-			try {
+			if (in == null) {
+				throw new IOException("No InputStream!");
+			}
+
+			if (cache != null) {
+				String size = conn.getContentLengthLong() < 0 ? "unknown size"
+						: StringUtils.formatNumber(conn.getContentLengthLong())
+								+ "bytes";
+				tracer.trace("Save to cache (" + size + "): " + originalUrl);
 				try {
-					cache.save(in, originalUrl);
-				} finally {
-					in.close();
+					try {
+						long bytes = cache.save(in, originalUrl);
+						tracer.trace("Saved to cache: "
+								+ StringUtils.formatNumber(bytes) + "bytes");
+					} finally {
+						in.close();
+					}
+					in = cache.load(originalUrl, true, true);
+				} catch (IOException e) {
+					tracer.error(new IOException(
+							"Cannot save URL to cache, will ignore cache: "
+									+ url, e));
 				}
-				in = cache.load(originalUrl, true, false);
-			} catch (IOException e) {
-				tracer.error(new IOException(
-						"Cannot save URL to cache, will ignore cache: " + url,
-						e));
 			}
-		}
 
-		return in;
+			return in;
+		} catch (IOException e) {
+			throw new IOException(String.format(
+					"Cannot find %s (current URL: %s)", originalUrl, url), e);
+		}
 	}
 
 	/**
@@ -369,9 +390,16 @@ public class Downloader {
 			throws IOException {
 		URLConnection conn = url.openConnection();
 
+		String cookies = generateCookies(cookiesValues);
+		if (cookies != null && !cookies.isEmpty()) {
+			conn.setRequestProperty("Cookie", cookies);
+		}
+
 		conn.setRequestProperty("User-Agent", UA);
-		conn.setRequestProperty("Cookie", generateCookies(cookiesValues));
 		conn.setRequestProperty("Accept-Encoding", "gzip");
+		conn.setRequestProperty("Accept", "*/*");
+		conn.setRequestProperty("Charset", "utf-8");
+
 		if (currentReferer != null) {
 			conn.setRequestProperty("Referer", currentReferer.toString());
 			conn.setRequestProperty("Host", currentReferer.getHost());
