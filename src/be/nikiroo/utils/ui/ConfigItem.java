@@ -62,8 +62,8 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 
 	protected MetaInfo<E> info;
 
-	private Object field;
-	private List<Object> fields = new ArrayList<Object>();
+	private JComponent field;
+	private List<JComponent> fields = new ArrayList<JComponent>();
 
 	/**
 	 * Create a new {@link ConfigItem} for the given {@link MetaInfo}.
@@ -82,8 +82,8 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 		ConfigItem<E> configItem = null;
 		switch (info.getFormat()) {
 		case BOOLEAN:
-			// addBooleanField(info, nhgap);
-			// break;
+			configItem = new ConfigItemBoolean<E>(info);
+			break;
 		case COLOR:
 			// addColorField(info, nhgap);
 			// break;
@@ -108,7 +108,6 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 		case STRING:
 		case LOCALE: // TODO?
 		default:
-			// addStringField(info, nhgap);
 			configItem = new ConfigItemString<E>(info);
 			break;
 		}
@@ -129,28 +128,14 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 		this.info = info;
 	}
 
-	private void reload(Object value) {
-		// We consider "" and NULL to be equals
-		if ("".equals(value)) {
-			value = null;
-		}
-		orig = value;
+	// create empty field that can be used later to setField
+	// note that reload WILL be called after, but the value is passed so you can
+	// diagnose/log errors
+	protected JComponent createField(Object value) {
+		return null;
 	}
 
-	private boolean isChanged(Object newValue) {
-		// We consider "" and NULL to be equals
-		if ("".equals(newValue)) {
-			newValue = null;
-		}
-
-		if (newValue == null) {
-			return orig != null;
-		}
-
-		return !newValue.equals(orig);
-	}
-
-	protected void setField(int item, Object field) {
+	private void setField(int item, JComponent field) {
 		if (item < 0) {
 			this.field = field;
 			return;
@@ -163,7 +148,7 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 		fields.set(item, field);
 	}
 
-	protected Object getField(int item) {
+	protected JComponent getField(int item) {
 		if (item < 0) {
 			return field;
 		}
@@ -181,10 +166,7 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 		setToField(value, item);
 
 		// We consider "" and NULL to be equals
-		if (value == null) {
-			value = "";
-		}
-		orig = value;
+		orig = (value == null ? "" : value);
 	}
 
 	// item: 0-based or -1 for no items
@@ -192,8 +174,10 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 		Object value = getFromField(item);
 
 		// We consider "" and NULL to be equals
-		if (orig.equals(value == null ? "" : value)) {
+		if (!orig.equals(value == null ? "" : value)) {
+			info.setDirty();
 			setToInfo(value, item);
+			orig = (value == null ? "" : value);
 		}
 	}
 
@@ -214,10 +198,7 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 	// item = 0-based for array, -1 for no array
 	protected void addField(final MetaInfo<E> info, final int item,
 			JComponent addTo, int nhgap) {
-		final JTextField field = new JTextField();
-
-		setField(item, field);
-
+		setField(item, createField(getFromInfo(item)));
 		reload(item);
 
 		info.addReloadedListener(new Runnable() {
@@ -234,54 +215,11 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 		});
 
 		addTo.add(label(info, nhgap), BorderLayout.WEST);
-		addTo.add(field, BorderLayout.CENTER);
+		addTo.add(getField(item), BorderLayout.CENTER);
 
-		setPreferredSize(field);
+		setPreferredSize(getField(item));
 	}
 
-	// private void addBooleanField(final MetaInfo<E> info, int nhgap) {
-	// final JCheckBox field = new JCheckBox();
-	// field.setToolTipText(info.getDescription());
-	// Boolean state = info.getBoolean(true);
-	//
-	// // Should not happen!
-	// if (state == null) {
-	// System.err
-	// .println("No default value given for BOOLEAN parameter \""
-	// + info.getName() + "\", we consider it is FALSE");
-	// state = false;
-	// }
-	//
-	// reload(state);
-	// field.setSelected(state);
-	//
-	// info.addReloadedListener(new Runnable() {
-	// @Override
-	// public void run() {
-	// Boolean state = info.getBoolean(true);
-	// if (state == null) {
-	// state = false;
-	// }
-	//
-	// reload(state);
-	// field.setSelected(state);
-	// }
-	// });
-	// info.addSaveListener(new Runnable() {
-	// @Override
-	// public void run() {
-	// boolean state = field.isSelected();
-	// if (isChanged(state)) {
-	// info.setBoolean(state);
-	// }
-	// }
-	// });
-	//
-	// this.add(label(info, nhgap), BorderLayout.WEST);
-	// this.add(field, BorderLayout.CENTER);
-	//
-	// setPreferredSize(field);
-	// }
 	//
 	// private void addColorField(final MetaInfo<E> info, int nhgap) {
 	// final JTextField field = new JTextField();

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import be.nikiroo.fanfix.data.MetaData;
 import be.nikiroo.utils.resources.Meta.Format;
 
 /**
@@ -28,6 +29,8 @@ public class MetaInfo<E extends Enum<E>> implements Iterable<MetaInfo<E>> {
 
 	private String name;
 	private String description;
+
+	private boolean dirty;
 
 	/**
 	 * Create a new {@link MetaInfo} from a value (without children).
@@ -169,6 +172,24 @@ public class MetaInfo<E extends Enum<E>> implements Iterable<MetaInfo<E>> {
 	 */
 	public boolean isArray() {
 		return meta.array();
+	}
+
+	/**
+	 * A manual flag to specify if the {@link MetaData} has been changed or not,
+	 * which can be used by {@link MetaInfo#save(boolean)}.
+	 * 
+	 * @return TRUE if it is dirty (if it has changed)
+	 */
+	public boolean isDirty() {
+		return dirty;
+	}
+
+	/**
+	 * A manual flag to specify that the {@link MetaData} has been changed,
+	 * which can be used by {@link MetaInfo#save(boolean)}.
+	 */
+	public void setDirty() {
+		this.dirty = true;
 	}
 
 	/**
@@ -561,8 +582,15 @@ public class MetaInfo<E extends Enum<E>> implements Iterable<MetaInfo<E>> {
 
 	/**
 	 * Save the current value to the {@link Bundle}.
+	 * <p>
+	 * Note that listeners will be called <b>before</b> the dirty check and
+	 * <b>before</b> saving the value.
+	 * 
+	 * @param onlyIfDirty
+	 *            only save the data if the dirty flag is set (will reset the
+	 *            dirty flag)
 	 */
-	public void save() {
+	public void save(boolean onlyIfDirty) {
 		for (Runnable listener : saveListeners) {
 			try {
 				listener.run();
@@ -570,7 +598,10 @@ public class MetaInfo<E extends Enum<E>> implements Iterable<MetaInfo<E>> {
 				e.printStackTrace();
 			}
 		}
-		bundle.setString(id, value);
+
+		if (!onlyIfDirty || isDirty()) {
+			bundle.setString(id, value);
+		}
 	}
 
 	/**

@@ -1,5 +1,6 @@
 package be.nikiroo.utils.ui;
 
+import javax.swing.JComponent;
 import javax.swing.JTextField;
 
 import be.nikiroo.utils.resources.MetaInfo;
@@ -43,5 +44,10 @@ public class ConfigItemString<E extends Enum<E>> extends ConfigItem<E> {
 	@Override
 	protected void setToInfo(Object value, int item) {
 		info.setString((String) value, item);
+	}
+	
+	@Override
+	protected JComponent createField(Object value) {
+		return new JTextField();
 	}
 }

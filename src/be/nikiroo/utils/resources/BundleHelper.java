@@ -26,16 +26,16 @@ class BundleHelper {
 	 */
 	static public Boolean parseBoolean(String str, int item) {
 		str = getItem(str, item);
-
-		if (str != null && str.length() > 0) {
+		if (str == null) {
+			return null;
+		}
+		
 			if (str.equalsIgnoreCase("true") || str.equalsIgnoreCase("on")
 					|| str.equalsIgnoreCase("yes"))
 				return true;
 			if (str.equalsIgnoreCase("false") || str.equalsIgnoreCase("off")
 					|| str.equalsIgnoreCase("no"))
 				return false;
-
-		}
 
 		return null;
 	}
@@ -68,7 +68,10 @@ class BundleHelper {
 	 */
 	static public Integer parseInteger(String str, int item) {
 		str = getItem(str, item);
-
+		if(str==null){
+			return null;
+		}
+		
 		try {
 			return Integer.parseInt(str);
 		} catch (Exception e) {
@@ -107,7 +110,10 @@ class BundleHelper {
 	 */
 	static public Character parseCharacter(String str, int item) {
 		str = getItem(str, item);
-
+		if(str==null){
+			return null;
+		}
+		
 		String s = str.trim();
 		if (s.length() == 1) {
 			return s.charAt(0);
@@ -144,6 +150,9 @@ class BundleHelper {
 	 */
 	static Integer parseColor(String str, int item) {
 		str = getItem(str, item);
+		if(str==null){
+			return null;
+		}
 
 		Integer rep = null;
 
@@ -285,13 +294,14 @@ class BundleHelper {
 	 * @return the raw {@link String} value that correspond to it
 	 */
 	static public List<String> parseList(String str, int item) {
+		if (str == null) {
+			return null;
+		}
+
 		if (item >= 0) {
 			str = getItem(str, item);
 		}
 
-		if (str == null) {
-			return null;
-		}
 		List<String> list = new ArrayList<String>();
 		try {
 			boolean inQuote = false;

@@ -168,7 +168,8 @@ public class Bundle<E extends Enum<E>> {
 			}
 		}
 
-		if (rep == null) {
+		//TODO: is it ok? need to jDoc?
+		if (rep == null || rep.isEmpty()) {
 			return def;
 		}
 
@@ -373,7 +374,12 @@ public class Bundle<E extends Enum<E>> {
 	 * @return the associated value
 	 */
 	public boolean getBoolean(E id, boolean def) {
-		return getBoolean(id, def, -1);
+		Boolean value = getBoolean(id);
+		if (value != null) {
+			return value;
+		}
+
+		return def;
 	}
 
 	/**
@@ -393,12 +399,12 @@ public class Bundle<E extends Enum<E>> {
 	 * @return the associated value
 	 */
 	public Boolean getBoolean(E id, boolean def, int item) {
-		String str = getString(id);
-		if (str == null) {
-			return def;
+		String value = getString(id);
+		if (value != null) {
+			return BundleHelper.parseBoolean(value, item);
 		}
 
-		return BundleHelper.parseBoolean(str, item);
+		return def;
 	}
 
 	/**
@@ -441,12 +447,12 @@ public class Bundle<E extends Enum<E>> {
 	 * @return the associated value
 	 */
 	public Integer getInteger(E id) {
-		String str = getString(id);
-		if (str == null) {
-			return null;
+		String value = getString(id);
+		if (value != null) {
+			return BundleHelper.parseInteger(value, -1);
 		}
 
-		return BundleHelper.parseInteger(str, -1);
+		return null;
 	}
 
 	/**
@@ -463,9 +469,10 @@ public class Bundle<E extends Enum<E>> {
 	 * @return the associated value
 	 */
 	public int getInteger(E id, int def) {
-		Integer i = getInteger(id);
-		if (i != null)
-			return i;
+		Integer value = getInteger(id);
+		if (value != null) {
+			return value;
+		}
 
 		return def;
 	}
@@ -486,13 +493,13 @@ public class Bundle<E extends Enum<E>> {
 	 * 
 	 * @return the associated value
 	 */
-	public int getInteger(E id, int def, int item) {
-		String str = getString(id);
-		if (str == null) {
-			return def;
+	public Integer getInteger(E id, int def, int item) {
+		String value = getString(id);
+		if (value != null) {
+			return BundleHelper.parseInteger(value, item);
 		}
 
-		return BundleHelper.parseInteger(str, item);
+		return def;
 	}
 
 	/**
@@ -552,9 +559,10 @@ public class Bundle<E extends Enum<E>> {
 	 * @return the associated value
 	 */
 	public char getCharacter(E id, char def) {
-		Character car = getCharacter(id);
-		if (car != null)
-			return car;
+		Character value = getCharacter(id);
+		if (value != null) {
+			return value;
+		}
 
 		return def;
 	}
@@ -572,13 +580,13 @@ public class Bundle<E extends Enum<E>> {
 	 * 
 	 * @return the associated value
 	 */
-	public char getCharacter(E id, char def, int item) {
-		String str = getString(id);
-		if (str == null) {
-			return def;
+	public Character getCharacter(E id, char def, int item) {
+		String value = getString(id);
+		if (value != null) {
+			return BundleHelper.parseCharacter(value, item);
 		}
 
-		return BundleHelper.parseCharacter(str, item);
+		return def;
 	}
 
 	/**
@@ -640,13 +648,13 @@ public class Bundle<E extends Enum<E>> {
 	 * 
 	 * @return the associated value
 	 */
-	public Integer getColor(E id, int def) {
+	public int getColor(E id, int def) {
 		Integer value = getColor(id);
-		if (value == null) {
-			return def;
+		if (value != null) {
+			return value;
 		}
 
-		return value;
+		return def;
 	}
 
 	/**
@@ -663,12 +671,12 @@ public class Bundle<E extends Enum<E>> {
 	 * @return the associated value
 	 */
 	public Integer getColor(E id, int def, int item) {
-		String str = getString(id);
-		if (str == null) {
-			return def;
+		String value = getString(id);
+		if (value != null) {
+			return BundleHelper.parseColor(value, item);
 		}
 
-		return BundleHelper.parseColor(str, item);
+		return def;
 	}
 
 	/**
@@ -731,11 +739,11 @@ public class Bundle<E extends Enum<E>> {
 	 */
 	public List<String> getList(E id, List<String> def) {
 		List<String> value = getList(id);
-		if (value == null) {
-			return def;
+		if (value != null) {
+			return value;
 		}
 
-		return value;
+		return def;
 	}
 
 	/**
@@ -751,12 +759,12 @@ public class Bundle<E extends Enum<E>> {
 	 *         not found or cannot be parsed as a list
 	 */
 	public List<String> getList(E id, List<String> def, int item) {
-		String str = getString(id);
-		if (str == null) {
-			return def;
+		String value = getString(id);
+		if (value != null) {
+			return BundleHelper.parseList(value, item);
 		}
 
-		return BundleHelper.parseList(str, item);
+		return def;
 	}
 
 	/**
