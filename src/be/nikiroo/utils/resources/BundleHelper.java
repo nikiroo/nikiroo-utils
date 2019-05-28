@@ -29,13 +29,13 @@ class BundleHelper {
 		if (str == null) {
 			return null;
 		}
-		
-			if (str.equalsIgnoreCase("true") || str.equalsIgnoreCase("on")
-					|| str.equalsIgnoreCase("yes"))
-				return true;
-			if (str.equalsIgnoreCase("false") || str.equalsIgnoreCase("off")
-					|| str.equalsIgnoreCase("no"))
-				return false;
+
+		if (str.equalsIgnoreCase("true") || str.equalsIgnoreCase("on")
+				|| str.equalsIgnoreCase("yes"))
+			return true;
+		if (str.equalsIgnoreCase("false") || str.equalsIgnoreCase("off")
+				|| str.equalsIgnoreCase("no"))
+			return false;
 
 		return null;
 	}
@@ -68,10 +68,10 @@ class BundleHelper {
 	 */
 	static public Integer parseInteger(String str, int item) {
 		str = getItem(str, item);
-		if(str==null){
+		if (str == null) {
 			return null;
 		}
-		
+
 		try {
 			return Integer.parseInt(str);
 		} catch (Exception e) {
@@ -110,10 +110,10 @@ class BundleHelper {
 	 */
 	static public Character parseCharacter(String str, int item) {
 		str = getItem(str, item);
-		if(str==null){
+		if (str == null) {
 			return null;
 		}
-		
+
 		String s = str.trim();
 		if (s.length() == 1) {
 			return s.charAt(0);
@@ -150,7 +150,7 @@ class BundleHelper {
 	 */
 	static Integer parseColor(String str, int item) {
 		str = getItem(str, item);
-		if(str==null){
+		if (str == null) {
 			return null;
 		}
 
@@ -270,7 +270,6 @@ class BundleHelper {
 	 * @return its size if it is a list, -1 if not
 	 */
 	static public int getListSize(String raw) {
-		// TODO: find better option?
 		List<String> list = parseList(raw, -1);
 		if (list == null) {
 			return -1;
@@ -283,7 +282,7 @@ class BundleHelper {
 	 * Return a {@link String} representation of the given list of values.
 	 * <p>
 	 * The list of values is comma-separated and each value is surrounded by
-	 * double-quotes; backslashes and double-quotes are escaped by a backslash.
+	 * double-quotes; caret (^) and double-quotes (") are escaped by a caret.
 	 * 
 	 * @param str
 	 *            the input value
@@ -327,7 +326,7 @@ class BundleHelper {
 
 						inQuote = !inQuote;
 						break;
-					case '\\':
+					case '^':
 						// We don't process it here
 						builder.append(car);
 						prevIsBackSlash = true;
@@ -371,6 +370,8 @@ class BundleHelper {
 
 	/**
 	 * Return a {@link String} representation of the given list of values.
+	 * <p>
+	 * NULL will be assimilated to an empty {@link String}.
 	 * 
 	 * @param list
 	 *            the input value
@@ -383,14 +384,14 @@ class BundleHelper {
 			if (builder.length() > 0) {
 				builder.append(", ");
 			}
-			builder.append(escape(item));
+			builder.append(escape(item == null ? "" : item));
 		}
 
 		return builder.toString();
 	}
 
 	/**
-	 * Escape the given value for list formating (no \\, no \n).
+	 * Escape the given value for list formating (no carets, no NEWLINES...).
 	 * <p>
 	 * You can unescape it with {@link BundleHelper#unescape(String)}
 	 * 
@@ -402,16 +403,16 @@ class BundleHelper {
 	 */
 	static public String escape(String value) {
 		return '"' + value//
-				.replace("\\", "\\\\") //
-				.replace("\"", "\\\"") //
-				.replace("\n", "\\\n") //
-				.replace("\r", "\\\r") //
+				.replace("^", "^^") //
+				.replace("\"", "^\"") //
+				.replace("\n", "^\n") //
+				.replace("\r", "^\r") //
 		+ '"';
 	}
 
 	/**
-	 * Unescape the given value for list formating (change \\n into \n and so
-	 * on).
+	 * Unescape the given value for list formating (change ^n into NEWLINE and
+	 * so on).
 	 * <p>
 	 * You can escape it with {@link BundleHelper#escape(String)}
 	 * 
@@ -444,12 +445,13 @@ class BundleHelper {
 				case 'R':
 					builder.append('\r');
 					break;
-				default: // includes \ and "
+				default: // includes ^ and "
 					builder.append(car);
 					break;
 				}
+				prevIsBackslash = false;
 			} else {
-				if (car == '\\') {
+				if (car == '^') {
 					prevIsBackslash = true;
 				} else {
 					builder.append(car);

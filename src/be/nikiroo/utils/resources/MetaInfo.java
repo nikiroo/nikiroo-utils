@@ -203,7 +203,7 @@ public class MetaInfo<E extends Enum<E>> implements Iterable<MetaInfo<E>> {
 	 * @return -1 or the number of items
 	 */
 	public int getListSize(boolean useDefaultIfEmpty) {
-		if (isArray()) {
+		if (!isArray()) {
 			return -1;
 		}
 
@@ -238,7 +238,7 @@ public class MetaInfo<E extends Enum<E>> implements Iterable<MetaInfo<E>> {
 	 */
 	public String getString(int item, boolean useDefaultIfEmpty) {
 		if (isArray() && item >= 0) {
-			List<String> values = BundleHelper.parseList(value, item);
+			List<String> values = BundleHelper.parseList(value, -1);
 			if (values != null && item < values.size()) {
 				return values.get(item);
 			}
@@ -464,8 +464,9 @@ public class MetaInfo<E extends Enum<E>> implements Iterable<MetaInfo<E>> {
 		if (isArray() && item >= 0) {
 			List<String> values = BundleHelper.parseList(this.value, -1);
 			for (int i = values.size(); i <= item; i++) {
-				values.set(item, value);
+				values.add(null);
 			}
+			values.set(item, value);
 			this.value = BundleHelper.fromList(values);
 		} else {
 			this.value = value;

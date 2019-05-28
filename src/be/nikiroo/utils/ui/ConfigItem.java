@@ -3,6 +3,8 @@ package be.nikiroo.utils.ui;
 import java.awt.BorderLayout;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
@@ -12,6 +14,7 @@ import java.util.List;
 
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
+import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -77,7 +80,7 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 	public ConfigItem(MetaInfo<E> info, int nhgap) {
 		this(info, true);
 
-		ConfigItem<E> configItem = null;
+		ConfigItem<E> configItem;
 		switch (info.getFormat()) {
 		case BOOLEAN:
 			configItem = new ConfigItemBoolean<E>(info);
@@ -111,14 +114,52 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 		}
 
 		if (info.isArray()) {
-			this.setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+			this.setLayout(new BorderLayout());
+			add(label(nhgap), BorderLayout.WEST);
+
+			final JPanel main = new JPanel();
+			main.setLayout(new BoxLayout(main, BoxLayout.Y_AXIS));
 			int size = info.getListSize(false);
 			for (int i = 0; i < size; i++) {
-				configItem.addField(i, this, nhgap);
+				JComponent field = configItem.createComponent(i);
+				main.add(field);
 			}
+
+			// TODO: image
+			final JButton add = new JButton("+");
+			final ConfigItem<E> fconfigItem = configItem;
+			add.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					JComponent field = fconfigItem
+							.createComponent(fconfigItem.info
+									.getListSize(false));
+					main.add(field);
+
+					// TODO this doesn't woooooorkk
+					add.invalidate();
+					field.invalidate();
+					main.invalidate();
+					ConfigItem.this.repaint();
+					ConfigItem.this.validate();
+					ConfigItem.this.repaint();
+				}
+			});
+
+			JPanel tmp = new JPanel(new BorderLayout());
+			tmp.add(add, BorderLayout.WEST);
+
+			JPanel mainPlus = new JPanel(new BorderLayout());
+			mainPlus.add(main, BorderLayout.CENTER);
+			mainPlus.add(tmp, BorderLayout.SOUTH);
+
+			add(mainPlus, BorderLayout.CENTER);
 		} else {
 			this.setLayout(new BorderLayout());
-			configItem.addField(-1, this, nhgap);
+			add(label(nhgap), BorderLayout.WEST);
+
+			JComponent field = configItem.createComponent(-1);
+			add(field, BorderLayout.CENTER);
 		}
 	}
 
@@ -354,7 +395,7 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 	 * @param addTo
 	 * @param nhgap
 	 */
-	protected void addField(final int item, JComponent addTo, int nhgap) {
+	protected JComponent createComponent(final int item) {
 		setField(item, createField(item));
 		reload(item);
 
@@ -371,10 +412,10 @@ public class ConfigItem<E extends Enum<E>> extends JPanel {
 			}
 		});
 
-		addTo.add(label(nhgap), BorderLayout.WEST);
-		addTo.add(getField(item), BorderLayout.CENTER);
+		JComponent field = getField(item);
+		setPreferredSize(field);
 
-		setPreferredSize(getField(item));
+		return field;
 	}
 
 	/**

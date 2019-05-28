@@ -1008,7 +1008,7 @@ public class Bundle<E extends Enum<E>> {
 			}
 
 			if (array) {
-				builder.append("\n# (This item accepts a list of escaped comma-separated values)");
+				builder.append("\n# (This item accepts a list of ^escaped comma-separated values)");
 			}
 		}
 
