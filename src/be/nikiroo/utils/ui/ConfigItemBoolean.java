@@ -53,9 +53,9 @@ public class ConfigItemBoolean<E extends Enum<E>> extends ConfigItem<E> {
 	}
 
 	@Override
-	protected JComponent createField(Object value) {
+	protected JComponent createField(int item) {
 		// Should not happen!
-		if (value == null) {
+		if (getFromInfo(item) == null) {
 			System.err
 					.println("No default value given for BOOLEAN parameter \""
 							+ info.getName() + "\", we consider it is FALSE");

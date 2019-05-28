@@ -1,28 +1,28 @@
 package be.nikiroo.utils.ui;
 
 import javax.swing.JComponent;
-import javax.swing.JTextField;
+import javax.swing.JPasswordField;
 
 import be.nikiroo.utils.resources.MetaInfo;
 
-public class ConfigItemString<E extends Enum<E>> extends ConfigItem<E> {
+public class ConfigItemPassword<E extends Enum<E>> extends ConfigItem<E> {
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * Create a new {@link ConfigItemString} for the given {@link MetaInfo}.
+	 * Create a new {@link ConfigItemPassword} for the given {@link MetaInfo}.
 	 * 
 	 * @param info
 	 *            the {@link MetaInfo}
 	 */
-	public ConfigItemString(MetaInfo<E> info) {
+	public ConfigItemPassword(MetaInfo<E> info) {
 		super(info);
 	}
 
 	@Override
 	protected Object getFromField(int item) {
-		JTextField field = (JTextField) getField(item);
+		JPasswordField field = (JPasswordField) getField(item);
 		if (field != null) {
-			return field.getText();
+			return new String(field.getPassword());
 		}
 
 		return null;
@@ -35,7 +35,7 @@ public class ConfigItemString<E extends Enum<E>> extends ConfigItem<E> {
 
 	@Override
 	protected void setToField(Object value, int item) {
-		JTextField field = (JTextField) getField(item);
+		JPasswordField field = (JPasswordField) getField(item);
 		if (field != null) {
 			field.setText(value == null ? "" : value.toString());
 		}
@@ -45,9 +45,9 @@ public class ConfigItemString<E extends Enum<E>> extends ConfigItem<E> {
 	protected void setToInfo(Object value, int item) {
 		info.setString((String) value, item);
 	}
-	
+
 	@Override
 	protected JComponent createField(int item) {
-		return new JTextField();
+		return new JPasswordField();
 	}
 }
