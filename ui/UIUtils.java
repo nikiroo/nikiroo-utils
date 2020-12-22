@@ -32,8 +32,6 @@ import javax.swing.event.HyperlinkListener;
 import be.nikiroo.utils.Version;
 import be.nikiroo.utils.VersionCheck;
 
-import com.sun.java.swing.plaf.windows.resources.windows;
-
 /**
  * Some Java Swing utilities.
  * 
@@ -376,7 +374,7 @@ public class UIUtils {
 	}
 
 	/**
-	 * Set the given {@link windows} to full screen mode, on the desktop it
+	 * Set the given {@link Window} to full screen mode, on the desktop it
 	 * currently resides on.
 	 * <p>
 	 * Can be cancelled by calling again with a NULL value.
