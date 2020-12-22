@@ -6,9 +6,13 @@ import java.awt.Desktop;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.GraphicsConfiguration;
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
 import java.awt.Paint;
 import java.awt.RadialGradientPaint;
 import java.awt.RenderingHints;
+import java.awt.Window;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
@@ -23,6 +27,8 @@ import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
 
+import com.sun.java.swing.plaf.windows.resources.windows;
+
 import be.nikiroo.utils.Version;
 import be.nikiroo.utils.VersionCheck;
 
@@ -34,7 +40,7 @@ import be.nikiroo.utils.VersionCheck;
 public class UIUtils {
 	static private Color buttonNormal;
 	static private Color buttonPressed;
-	
+
 	/**
 	 * Set a fake "native Look &amp; Feel" for the application if possible
 	 * (check for the one currently in use, then try GTK).
@@ -49,7 +55,7 @@ public class UIUtils {
 		String lf = UIManager.getSystemLookAndFeelClassName();
 		if (lf.equals(noLF))
 			lf = "com.sun.java.swing.plaf.gtk.GTKLookAndFeel";
-		
+
 		return setLookAndFeel(lf);
 	}
 
@@ -240,12 +246,10 @@ public class UIUtils {
 		scroll.getHorizontalScrollBar().setUnitIncrement(16);
 
 		if (!allowHorizontal) {
-			scroll.setHorizontalScrollBarPolicy(
-					JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+			scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		}
 		if (!allowVertical) {
-			scroll.setVerticalScrollBarPolicy(
-					JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+			scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
 		}
 
 		return scroll;
@@ -276,7 +280,7 @@ public class UIUtils {
 	 */
 	static public boolean showUpdatedDialog(Component parentComponent,
 			VersionCheck updates, String introText, String title) {
-		
+
 		StringBuilder builder = new StringBuilder();
 		final JEditorPane updateMessage = new JEditorPane("text/html", "");
 		if (introText != null && !introText.isEmpty()) {
@@ -335,7 +339,7 @@ public class UIUtils {
 		return JOptionPane.showConfirmDialog(parentComponent, updateMessage,
 				title, JOptionPane.DEFAULT_OPTION) == JOptionPane.OK_OPTION;
 	}
-	
+
 	/**
 	 * Set the given {@link JButton} as "pressed" (selected, but with more UI
 	 * visibility).
@@ -367,5 +371,51 @@ public class UIUtils {
 
 		button.setSelected(pressed);
 		button.setBackground(pressed ? buttonPressed : buttonNormal);
+	}
+
+	/**
+	 * Set the given {@link windows} to full screen mode, on the desktop it
+	 * currently resides on.
+	 * <p>
+	 * Can be cancelled by calling again with a NULL value.
+	 * 
+	 * @param win
+	 *            the window to set to full screen
+	 */
+	static public void setFullscreenWindow(Window win) {
+		GraphicsEnvironment env = GraphicsEnvironment
+				.getLocalGraphicsEnvironment();
+		GraphicsDevice[] screens = env.getScreenDevices();
+
+		if (win == null) {
+			for (GraphicsDevice screen : screens) {
+				if (win == null) {
+					screen.setFullScreenWindow(null);
+				}
+			}
+
+			return;
+		}
+
+		GraphicsDevice current = null;
+		for (GraphicsDevice screen : screens) {
+			GraphicsConfiguration[] confs = screen.getConfigurations();
+			for (GraphicsConfiguration conf : confs) {
+				if (conf.getBounds().contains(win.getBounds())) {
+					current = screen;
+					break;
+				}
+			}
+
+			if (current != null)
+				break;
+		}
+
+		if (current == null) {
+			current = GraphicsEnvironment.getLocalGraphicsEnvironment()
+					.getDefaultScreenDevice();
+		}
+
+		current.setFullScreenWindow(win);
 	}
 }
