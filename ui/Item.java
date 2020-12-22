@@ -428,7 +428,7 @@ abstract public class Item extends JPanel {
 	 * 
 	 * @return a status indicator ready to be used
 	 */
-	private JLabel generateStatusIndicator(Color color) {
+	private JLabel generateStatusIndicator(final Color color) {
 		JLabel indicator = new JLabel("   ") {
 			private static final long serialVersionUID = 1L;
 
