@@ -403,6 +403,34 @@ public class IOUtils {
 
 		return loader.getResourceAsStream(name);
 	}
+	
+	/**
+	 * Return the running directory/file, that is, the root binary directory for
+	 * running java classes or the running JAR file for JAR files.
+	 * 
+	 * @param clazz
+	 *            a Class from the running program (will only have an impact
+	 *            when not running from a JAR file)
+	 * @param base
+	 *            return the base directory (the one where the binary root or
+	 *            the JAR file resides)
+	 * 
+	 * @return the directory or file
+	 */
+	public static File getRunningDirectory(
+			@SuppressWarnings("rawtypes") Class clazz, boolean base) {
+		String uri = clazz.getProtectionDomain().getCodeSource().getLocation()
+				.toString();
+		if (uri.startsWith("file:"))
+			uri = uri.substring("file:".length());
+		File root = new File(uri);
+
+		if (base) {
+			root = root.getParentFile();
+		}
+
+		return root;
+	}
 
 	/**
 	 * Return a resetable {@link InputStream} from this stream, and reset it.

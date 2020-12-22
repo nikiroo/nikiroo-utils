@@ -12,6 +12,7 @@ import java.awt.RenderingHints;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
+import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JEditorPane;
 import javax.swing.JLabel;
@@ -31,6 +32,9 @@ import be.nikiroo.utils.VersionCheck;
  * @author niki
  */
 public class UIUtils {
+	static private Color buttonNormal;
+	static private Color buttonPressed;
+	
 	/**
 	 * Set a fake "native Look &amp; Feel" for the application if possible
 	 * (check for the one currently in use, then try GTK).
@@ -330,5 +334,38 @@ public class UIUtils {
 
 		return JOptionPane.showConfirmDialog(parentComponent, updateMessage,
 				title, JOptionPane.DEFAULT_OPTION) == JOptionPane.OK_OPTION;
+	}
+	
+	/**
+	 * Set the given {@link JButton} as "pressed" (selected, but with more UI
+	 * visibility).
+	 * <p>
+	 * The {@link JButton} will answer {@link JButton#isSelected()} if it is
+	 * pressed.
+	 * 
+	 * @param button
+	 *            the button to select/press
+	 * @param pressed
+	 *            the new "pressed" state
+	 */
+	static public void setButtonPressed(JButton button, boolean pressed) {
+		if (buttonNormal == null) {
+			JButton defButton = new JButton(" ");
+			buttonNormal = defButton.getBackground();
+			if (buttonNormal.getBlue() >= 128) {
+				buttonPressed = new Color( //
+						Math.max(buttonNormal.getRed() - 100, 0), //
+						Math.max(buttonNormal.getGreen() - 100, 0), //
+						Math.max(buttonNormal.getBlue() - 100, 0));
+			} else {
+				buttonPressed = new Color( //
+						Math.min(buttonNormal.getRed() + 100, 255), //
+						Math.min(buttonNormal.getGreen() + 100, 255), //
+						Math.min(buttonNormal.getBlue() + 100, 255));
+			}
+		}
+
+		button.setSelected(pressed);
+		button.setBackground(pressed ? buttonPressed : buttonNormal);
 	}
 }
