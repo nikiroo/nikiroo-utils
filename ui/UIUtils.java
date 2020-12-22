@@ -10,7 +10,9 @@ import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Paint;
+import java.awt.Point;
 import java.awt.RadialGradientPaint;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.Window;
 import java.io.IOException;
@@ -29,6 +31,8 @@ import javax.swing.event.HyperlinkListener;
 
 import be.nikiroo.utils.Version;
 import be.nikiroo.utils.VersionCheck;
+
+import com.sun.java.swing.plaf.windows.resources.windows;
 
 /**
  * Some Java Swing utilities.
@@ -394,12 +398,15 @@ public class UIUtils {
 
 			return;
 		}
+		
+		Rectangle r = win.getBounds();
+		Point center = new Point(r.x + r.width / 2, r.y + r.height / 2);
 
 		GraphicsDevice current = null;
 		for (GraphicsDevice screen : screens) {
 			GraphicsConfiguration[] confs = screen.getConfigurations();
 			for (GraphicsConfiguration conf : confs) {
-				if (conf.getBounds().contains(win.getBounds())) {
+				if (conf.getBounds().contains(center)) {
 					current = screen;
 					break;
 				}
