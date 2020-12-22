@@ -27,8 +27,6 @@ import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
 
-import com.sun.java.swing.plaf.windows.resources.windows;
-
 import be.nikiroo.utils.Version;
 import be.nikiroo.utils.VersionCheck;
 
