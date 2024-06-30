@@ -6,6 +6,8 @@
 - new: ConfigItem: easier to extend
 - fix: CacheMemory: fix stackoverflow bug
 - fix: Bundles/TransBundles: def values
+- new: Use git submodules instead of a sub branch
+- new: remove configure.sh, use simple Makefile
 
 ## Version 5.1.0
 
