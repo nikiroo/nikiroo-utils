@@ -111,7 +111,7 @@ clean:
 	done
 
 mrproper: mrpropre
-mrpropre: clean
+mrpropre: clean man
 	rm -f $(NAME).jar
 	rm -f $(NAME)-sources.jar
 	[ ! -e VERSION ] || rm -f "$(NAME)-`cat VERSION`.jar"
