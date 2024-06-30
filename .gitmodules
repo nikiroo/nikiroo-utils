@@ -1,0 +1,4 @@
+[submodule "src/be/nikiroo/utils"]
+	path = src/be/nikiroo/utils
+	url = .
+	branch = subtree
