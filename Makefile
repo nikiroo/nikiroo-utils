@@ -10,9 +10,18 @@
 #
 NAME  = nikiroo-utils
 MAIN  = be/nikiroo/tests/utils/Test
-MORE += be/nikiroo/utils/ui/test/TestUI
-# MORE += be/nikiroo/utils/android/test/TestAndroid
 TEST  = be/nikiroo/tests/utils/Test
+
+# Option for this program: UI=android (or UI=awt by default)
+ifeq ($(UI),android)
+MORE += be/nikiroo/utils/android/test/TestAndroid
+TEST += be/nikiroo/utils/android/ImageUtilsAndroid
+else
+MORE += be/nikiroo/utils/ui/ImageUtilsAwt
+MORE += be/nikiroo/utils/ui/ImageTextAwt
+TEST += be/nikiroo/utils/ui/test/TestUI
+endif
+
 
 JAR_MISC = -C ./ LICENSE -C ./ VERSION -C libs/ licenses
 JAR_FLAGS  += -C bin/ be -C bin/ org $(JAR_MISC)
@@ -63,7 +72,8 @@ help:
 	@echo "	make uninstall	: to uninstall the application from $$PREFIX"
 	@echo " make man	: to make the manual pages (requires pandoc)"
 
-.PHONY: all clean mrproper mrpropre build run jrun jar sjar resources test-resources install libs man love
+.PHONY: all clean mrproper mrpropre build run jrun jar sjar resources \
+	test-resources install libs man love
 
 bin:
 	@mkdir -p bin
@@ -182,7 +192,7 @@ $(NAME)-sources.jar: libs
 		fi; \
 	fi;
 
-$(NAME).jar: build resources
+$(NAME).jar: resources
 	@if [ -d libs/bin/ ]; then \
 		echo "Copying additional binaries from libs/bin/ into bin/...";\
 		cp -r libs/bin/* bin/; \
@@ -196,15 +206,15 @@ $(NAME).jar: build resources
 	@[ ! -e VERSION ] || echo Copying to "$(NAME)-`cat VERSION`.jar"...
 	@[ ! -e VERSION ] || cp $(NAME).jar "$(NAME)-`cat VERSION`.jar"
 
-run: build
+run: 
 	@echo Running "$(NAME)"...
 	$(JAVA) $(JAVA_FLAGS) $(MAIN)
 
-jrun: build
+jrun: 
 	@echo Running "$(NAME).jar"...
 	$(RJAR) $(RJAR_FLAGS) $(NAME).jar
 
-run-test: test
+run-test: 
 	@echo Running tests for "$(NAME)"...
 	@[ "$(TEST)" != "" ] || echo No test sources defined.
 	@if [ "`whereis tput`" = "tput:" ]; then \
@@ -214,10 +224,15 @@ run-test: test
 	else \
 	ok="`tput bold`[`tput setf 2` OK `tput init``tput bold`]`tput init`"; \
 	ko="`tput bold`[`tput setf 4` !! `tput init``tput bold`]`tput init`"; \
-	cols='"`tput cols`"'; \
+	cols="`tput cols`"; \
 	fi; \
-	[ "$(TEST)"  = "" ] || \
-		( clear ; $(JAVA) $(JAVA_FLAGS) $(TEST) "$$cols" "$$ok" "$$ko" )
+	[ "$(TEST)"  = "" ] || ( \
+		clear; \
+		for test in $(TEST); do \
+			$(JAVA) $(JAVA_FLAGS) "$$test" "$$cols" "$$ok" "$$ko"; \
+		done; \
+	);
+		
 
 install: man
 	@[ -e $(NAME).jar ] || echo You need to build the jar
