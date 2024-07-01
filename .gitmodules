@@ -1,4 +1,4 @@
 [submodule "src/be/nikiroo/utils"]
 	path = src/be/nikiroo/utils
-	url = .
+	url = git@github.com:nikiroo/nikiroo-utils.git
 	branch = subtree
