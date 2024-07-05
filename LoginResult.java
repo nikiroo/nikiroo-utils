@@ -85,6 +85,11 @@ public class LoginResult {
 	 */
 	public LoginResult(String cookie, String who, String key,
 			List<String> subkeys, boolean allowNoSubkey) {
+		if (who == null)
+			who = "";
+		if (key == null)
+			key = "";
+
 		if (cookie != null) {
 			String hashes[] = cookie.split("~");
 			if (hashes.length >= 2) {
@@ -103,6 +108,8 @@ public class LoginResult {
 					}
 
 					for (String subkey : subkeys) {
+						if (subkey == null)
+							subkey = "";
 						if (CookieUtils.validateCookie(wookie + subkey + opts,
 								rehashed)) {
 							this.cookie = generateCookie(who, key, subkey,
@@ -202,10 +209,17 @@ public class LoginResult {
 	 */
 	private String generateCookie(String who, String key, String subkey,
 			String option) {
+		if (who == null)
+			who = "";
+		if (key == null)
+			key = "";
+		if (subkey == null)
+			subkey = "";
+		
 		String wookie = CookieUtils.generateCookie(who + key, 0);
-		return wookie + "~"
-				+ CookieUtils.generateCookie(
-						wookie + (subkey == null ? "" : subkey) + option, 0)
-				+ "~" + option;
+		return wookie + "~" //
+				+ CookieUtils.generateCookie(wookie + subkey + option, 0) //
+				+ "~" //
+				+ option;
 	}
 }
